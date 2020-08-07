@@ -17,7 +17,7 @@ const int pulses_per_litre = 90;
 //Debounce variables
 int buttonState = LOW;
 int prevState = LOW;
-long lastDebounce = 0;  // The last time the output pin was toggled
+long lastDebounce = 0;      // The last time the output pin was toggled
 long debounceDelay = 50;    // The debounce time; increase if the output flickers
 
 //Runs only once
@@ -25,13 +25,13 @@ void setup() {
   Serial.begin(9600);                         //Opens Serial Monitor
   pinMode(inpPin, INPUT);                     //Input signal PIN2
   pinMode(buttonPin, INPUT);                  //Printer signal
+  attachInterrupt(0, count_pulse, RISING);    //0 stands for PIN2 of the Arduino board
 } 
 
 
 //Runs continuously
 void loop() 
 { 
-  attachInterrupt(digitalPinToInterrupt(inpPin), count_pulse, RISING);  //0 stands for PIN2 of the Arduino board
   //Pulse measuring
   pulse=0;
   time_now = millis();                             //Delay setup
