@@ -112,6 +112,9 @@ void data_ticket(DateTime date){
   Serial.println("Hora: ");
   Serial.print(date.hour(), DEC);
   Serial.print(':');
+  if(date.minute() < 10){
+    Serial.print("0");  
+  }
   Serial.println(date.minute(), DEC);
   Serial.println("Litros: ");
   Serial.println(totalizer, 2);
