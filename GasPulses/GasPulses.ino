@@ -1,5 +1,7 @@
 //Libraries
 #include "Adafruit_Thermal.h"
+#include <Wire.h>
+#include "RTClib.h"
 
 //Macros
 #define inpPin 2
@@ -7,7 +9,7 @@
 #define buttonPin 5
 
 //Variables definition
-volatile unsigned int pulse = 0;
+volatile int pulse = 0;
 unsigned int total_pulses = 0;
 float totalizer;
 unsigned long time_now = 0;
@@ -20,12 +22,25 @@ int prevState = LOW;
 long lastDebounce = 0;      // The last time the output pin was toggled
 long debounceDelay = 50;    // The debounce time; increase if the output flickers
 
+//variables for RTC
+RTC_DS1307 rtc;
+
 //Runs only once
 void setup() {
+  Wire.begin();
   Serial.begin(9600);                         //Opens Serial Monitor
   pinMode(inpPin, INPUT);                     //Input signal PIN2
   pinMode(buttonPin, INPUT);                  //Printer signal
   attachInterrupt(0, count_pulse, RISING);    //0 stands for PIN2 of the Arduino board
+  
+  //RTC Configuration
+    if(!rtc.begin()){
+      Serial.println("ERROR");
+      return;
+    }
+    
+
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // set time in the rtc first time
 } 
 
 
@@ -34,38 +49,24 @@ void loop()
 { 
   //Pulse measuring
   pulse=0;
-  time_now = millis();                             //Delay setup
-  interrupts();                                    //Starts interrupts
+  time_now = millis();                             //Delay setups
   while(millis() - time_now <= period){}           //Equivalent to delay(1000) instruction
-  noInterrupts();                                  //Stops interrupts  
-
-  //Printing
+  
+ 
 /*  Serial.print("Pulses per second: ");  //Debugging pulses
   Serial.println(pulse); */
-  data_ticket();                          //Calls printing function    
+  DateTime now = rtc.now();
+  noInterrupts();
+  data_ticket(now);                          //Calls printing function    
 
   //Totalizer logic
   total_pulses += pulse;        
   totalizer = float(total_pulses)/pulses_per_litre; 
-
+  interrupts();
   //Button function
   buttonState = digitalRead(buttonPin);
-  /*
-  if(printer()){
-    // Open SD card for writing
-    tempsFile = SD.open("temps.txt", FILE_WRITE);
-
-    if (tempsFile) {
-      // write temps to SD card
-      tempsFile.print("Total de litros: ");
-      tempsFile.println(totalizer);
-      // close the file
-      tempsFile.close();
-    }else{
-      Serial.println("Error opening file");
-    }
-  }*/
-  delay(10);
+   
+  
 } 
 
 
@@ -93,7 +94,8 @@ bool printera(){
 
 
 //Print ticket format
-void data_ticket(){
+void data_ticket(DateTime date){
+     
   Serial.println("               Lupqsa");
   Serial.println("             S.A de C.V");
   Serial.println(" ");
@@ -102,9 +104,15 @@ void data_ticket(){
   Serial.println("Ticket: ");
   Serial.println("01");
   Serial.println("fecha");
-  Serial.println("06/08/2020");
+  Serial.print(date.day(), DEC);
+  Serial.print('/');
+  Serial.print(date.month(), DEC);
+  Serial.print('/');
+  Serial.println(date.year(), DEC);
   Serial.println("Hora: ");
-  Serial.println("11:03 am");
+  Serial.print(date.hour(), DEC);
+  Serial.print(':');
+  Serial.println(date.minute(), DEC);
   Serial.println("Litros: ");
   Serial.println(totalizer, 2);
 }
