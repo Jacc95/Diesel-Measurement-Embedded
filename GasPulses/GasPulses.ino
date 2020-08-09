@@ -14,7 +14,7 @@
 //Variables definition
 volatile int pulse = 0;
 unsigned int total_pulses = 0;
-float totalizer;
+float totalizer = 0.00;
 unsigned long time_now = 0;       //
 const int period = 1000;          //1sec loop period
 const int pulses_per_litre = 90;
@@ -45,11 +45,11 @@ void setup() {
   attachInterrupt(0, count_pulse, RISING);    //0 stands for PIN2 of the Arduino board
   
   //RTC Configuration
-    if(!rtc.begin()){
-      Serial.println("ERROR");
-      return;
-    }  
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // set time in the rtc when uploading code
+  if(!rtc.begin()){
+    Serial.println("ERROR");
+    return;
+  }  
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // set time in the rtc when uploading code
   
   //Initiate the LCD:
   lcd.init();
@@ -69,25 +69,22 @@ void loop()
  
 /*  Serial.print("Pulses per second: ");  //Debugging pulses
   Serial.println(pulse); */
+  //Write on the EEPROM the last totalizer value
+  EepromRTC.writeFloat(1, totalizer); 
   DateTime now = rtc.now();
-  noInterrupts();
   data_ticket(now);                          //Calls printing function (Date, Totalizer,etc)   
-
+  
+  noInterrupts();
   //Totalizer logic
   total_pulses += pulse;        
   totalizer = float(total_pulses)/pulses_per_litre; 
-  
   interrupts();
   
   //Button function
   buttonState = digitalRead(buttonPin1);
 
-  //Write on the EEPROM the last totalizer value
-  EepromRTC.writeFloat(1, totalizer); 
-
   //Displays the totalizer value on the LCD
   lcd_display(totalizer);
-  
 } 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +99,7 @@ void count_pulse()
 
 
 //Debouncing function
-bool printer(){
+bool debounce(){
   buttonState = digitalRead(buttonPin1);
   
   if(buttonState != prevState){
@@ -142,8 +139,8 @@ void data_ticket(DateTime date){
     Serial.print("0");  
   }
   Serial.println(date.minute(), DEC);
-  Serial.println("Litros: ");
-    
+  
+  Serial.println("Litros: ");  
   float read_totalizer = EepromRTC.readFloat(1); //leer desde memoria en la posicion 1
   Serial.println(read_totalizer);
 }
