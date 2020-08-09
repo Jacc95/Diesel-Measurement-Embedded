@@ -2,6 +2,7 @@
 #include "Adafruit_Thermal.h"
 #include <Wire.h>
 #include "RTClib.h"
+#include "AT24CX.h"
 
 //Macros
 #define inpPin 2
@@ -24,6 +25,9 @@ long debounceDelay = 50;    // The debounce time; increase if the output flicker
 
 //variables for RTC
 RTC_DS1307 rtc;
+
+//variables for memory
+AT24C32 EepromRTC;
 
 //Runs only once
 void setup() {
@@ -62,9 +66,15 @@ void loop()
   //Totalizer logic
   total_pulses += pulse;        
   totalizer = float(total_pulses)/pulses_per_litre; 
+  
   interrupts();
   //Button function
   buttonState = digitalRead(buttonPin);
+  
+  EepromRTC.writeFloat(1, totalizer); //escribir en memoria en la posicion 1
+  float read_totalizer = EepromRTC.readFloat(1); //leer desde memoria en la posicion 1
+
+  Serial.print("Dato float: "); Serial.println(read_totalizer);
    
   
 } 
@@ -113,6 +123,6 @@ void data_ticket(DateTime date){
   Serial.print(date.hour(), DEC);
   Serial.print(':');
   Serial.println(date.minute(), DEC);
-  Serial.println("Litros: ");
-  Serial.println(totalizer, 2);
+  //Serial.println("Litros: ");
+  //Serial.println(totalizer, 2);
 }
