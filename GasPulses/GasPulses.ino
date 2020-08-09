@@ -1,54 +1,64 @@
 //Libraries
-#include "Adafruit_Thermal.h"
-#include <Wire.h>
-#include "RTClib.h"
-#include "AT24CX.h"
+#include "Adafruit_Thermal.h"     //Library for Thermal Printer
+#include <Wire.h>                 //Library for I2C
+#include "RTClib.h"               //Library for RTC (Clock)
+#include "AT24CX.h"               //Library for EEPROM (Memory)
+#include "LiquidCrystal_I2C.h"    //Library for the LCD
 
 //Macros
-#define inpPin 2
-#define sdPin 4
-#define buttonPin 5
+#define inpPin 2                  //Pulse signal pin                   
+#define buttonPin1 3              //
+#define buttonPin2 4              //
+#define buttonPin3 5              //
 
 //Variables definition
 volatile int pulse = 0;
 unsigned int total_pulses = 0;
 float totalizer;
-unsigned long time_now = 0;
-const int period = 1000;          //1sec
+unsigned long time_now = 0;       //
+const int period = 1000;          //1sec loop period
 const int pulses_per_litre = 90;
 
 //Debounce variables
-int buttonState = LOW;
-int prevState = LOW;
+int buttonState = LOW;      
+int prevState = LOW;        
 long lastDebounce = 0;      // The last time the output pin was toggled
 long debounceDelay = 50;    // The debounce time; increase if the output flickers
 
-//variables for RTC
+//Object rtc
 RTC_DS1307 rtc;
 
-//variables for memory
+//Object EepromRTC (Memory)
 AT24C32 EepromRTC;
 
-//Runs only once
+//Object lcd
+LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2); // Change to (0x27,16,2) for 16x2 LCD.
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+//MAIN FUNCTION. Runs once
+///////////////////////////////////////////////////////////////////////////////////////////////
 void setup() {
   Wire.begin();
   Serial.begin(9600);                         //Opens Serial Monitor
   pinMode(inpPin, INPUT);                     //Input signal PIN2
-  pinMode(buttonPin, INPUT);                  //Printer signal
+  pinMode(buttonPin1, INPUT);                 //Printer signal
   attachInterrupt(0, count_pulse, RISING);    //0 stands for PIN2 of the Arduino board
   
   //RTC Configuration
     if(!rtc.begin()){
       Serial.println("ERROR");
       return;
-    }
-    
-
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // set time in the rtc first time
+    }  
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // set time in the rtc when uploading code
+  
+  //Initiate the LCD:
+  lcd.init();
+  lcd.backlight();
 } 
 
-
-//Runs continuously
+///////////////////////////////////////////////////////////////////////////////////////////////
+//MAIN FUNCTION. Runs continuously
+///////////////////////////////////////////////////////////////////////////////////////////////
 void loop() 
 { 
   //Pulse measuring
@@ -61,20 +71,28 @@ void loop()
   Serial.println(pulse); */
   DateTime now = rtc.now();
   noInterrupts();
-  data_ticket(now);                          //Calls printing function    
+  data_ticket(now);                          //Calls printing function (Date, Totalizer,etc)   
 
   //Totalizer logic
   total_pulses += pulse;        
   totalizer = float(total_pulses)/pulses_per_litre; 
   
   interrupts();
-  //Button function
-  buttonState = digitalRead(buttonPin);
   
-  EepromRTC.writeFloat(1, totalizer); //escribir en memoria en la posicion 1
+  //Button function
+  buttonState = digitalRead(buttonPin1);
+
+  //Write on the EEPROM the last totalizer value
+  EepromRTC.writeFloat(1, totalizer); 
+
+  //Displays the totalizer value on the LCD
+  lcd_display(totalizer);
   
 } 
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+//FUNCTIONS. Called inside void loop
+///////////////////////////////////////////////////////////////////////////////////////////////
 
 //Interrupt function
 void count_pulse() 
@@ -84,8 +102,8 @@ void count_pulse()
 
 
 //Debouncing function
-bool printera(){
-  buttonState = digitalRead(buttonPin);
+bool printer(){
+  buttonState = digitalRead(buttonPin1);
   
   if(buttonState != prevState){
     lastDebounce = millis();
@@ -118,7 +136,9 @@ void data_ticket(DateTime date){
   Serial.println("Hora: ");
   Serial.print(date.hour(), DEC);
   Serial.print(':');
-  if(date.minute() < 10){     //Adapts the minutes to the 2-digit format
+  
+  //Adapts the minutes to the 2-digit format
+  if(date.minute() < 10){     
     Serial.print("0");  
   }
   Serial.println(date.minute(), DEC);
@@ -126,4 +146,12 @@ void data_ticket(DateTime date){
     
   float read_totalizer = EepromRTC.readFloat(1); //leer desde memoria en la posicion 1
   Serial.println(read_totalizer);
+}
+
+void lcd_display(float totalizer){
+  lcd.setCursor(0, 0);          //Sets cursor at first row
+  lcd.print("Total litros:");
+  lcd.setCursor(0, 1);          //Sets cursor at second row
+  lcd.print(totalizer);
+    
 }
