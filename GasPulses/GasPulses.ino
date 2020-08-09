@@ -72,10 +72,6 @@ void loop()
   buttonState = digitalRead(buttonPin);
   
   EepromRTC.writeFloat(1, totalizer); //escribir en memoria en la posicion 1
-  float read_totalizer = EepromRTC.readFloat(1); //leer desde memoria en la posicion 1
-
-  Serial.print("Dato float: "); Serial.println(read_totalizer);
-   
   
 } 
 
@@ -122,10 +118,12 @@ void data_ticket(DateTime date){
   Serial.println("Hora: ");
   Serial.print(date.hour(), DEC);
   Serial.print(':');
-  if(date.minute() < 10){
+  if(date.minute() < 10){     //Adapts the minutes to the 2-digit format
     Serial.print("0");  
   }
   Serial.println(date.minute(), DEC);
-  //Serial.println("Litros: ");
-  //Serial.println(totalizer, 2);
+  Serial.println("Litros: ");
+    
+  float read_totalizer = EepromRTC.readFloat(1); //leer desde memoria en la posicion 1
+  Serial.println(read_totalizer);
 }
