@@ -7,9 +7,9 @@
 
 //Macros
 #define inpPin 2                  // Pulse signal pin                   
-#define buttonPin1 3              //
-#define buttonPin2 4              //
-#define buttonPin3 5              //
+#define buttonPin1 4              // Reset button
+#define buttonPin2 5              //
+#define buttonPin3 6              //
 
 //Variables definition
 volatile int pulse = 0;           // Variable modified inside the external interrupt
@@ -17,16 +17,13 @@ unsigned int total_pulses = 0;    // Total pulses saved inside the EEprom as wel
 float totalizer = 0.00;           // Converted total pulses (Output in liters)
 unsigned long time_now = 0;       //
 const int period = 1000;          // 1sec loop period
-const int pulses_per_litre = 100; // Pulses required to count 1 litre
+const int pulses_per_litre = 100; // Pulses required to count 1 litre of diesel
 
-//Debounce variables
-int buttonState = LOW;      
+//Debounce variables [UNUSED]
+bool buttonState = LOW;      
 int prevState = LOW;        
 long lastDebounce = 0;            // The last time the output pin was toggled
 long debounceDelay = 50;          // The debounce time; increase if the output flickers
-
-//EEprom Variable
-float read_totalizer = 0.00;
 
 //Object rtc
 RTC_DS1307 rtc;
@@ -72,8 +69,8 @@ void loop()
   time_now = millis();                             //Delay setups
   while(millis() - time_now <= period){}           //Equivalent to delay(1000) instruction
 
-  Serial.print("Pulses per second: ");             //Debugging pulses
-  Serial.println(pulse); 
+  /*Serial.print("Pulses per second: ");             //Debugging pulses
+  Serial.println(pulse); */
   
   DateTime now = rtc.now();                        //Initializes the rtc value
   
@@ -81,9 +78,14 @@ void loop()
   
   //Totalizer logic
   total_pulses += pulse;        
-  totalizer = float(total_pulses)/pulses_per_litre; 
   
   interrupts();
+
+  //Total pulses to totalizer (litres) conversion
+  totalizer = float(total_pulses)/pulses_per_litre; 
+    
+  if(digitalRead(buttonPin1) == HIGH){
+    reset();}
   
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
@@ -94,8 +96,6 @@ void loop()
   //Displays the totalizer value on the LCD
   lcd_display(totalizer);
   
-  //Button function
-  buttonState = digitalRead(buttonPin1);
 
 
 } 
@@ -111,7 +111,7 @@ void count_pulse()
 } 
 
 
-//Debouncing function
+//Debouncing function [UNUSED]
 bool debounce(){
   buttonState = digitalRead(buttonPin1);
   
@@ -129,7 +129,7 @@ bool debounce(){
 
 //Print ticket format
 void data_ticket(DateTime date, float read_totalizer){
-     
+  
   Serial.println("               Lupqsa");
   Serial.println("             S.A de C.V");
   Serial.println(" ");
@@ -153,7 +153,7 @@ void data_ticket(DateTime date, float read_totalizer){
   }
   Serial.println(date.minute(), DEC);
   
-  Serial.println("Litros: ");  
+  Serial.println("Acumulado en litros: ");  
   Serial.println(read_totalizer);
 }
 
@@ -166,3 +166,8 @@ void lcd_display(float totalizer){
   lcd.print(totalizer);
     
 }
+
+void reset(){
+  total_pulses = 0;
+}
+ 
