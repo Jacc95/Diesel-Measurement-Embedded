@@ -1,29 +1,29 @@
 //Libraries
-#include "Adafruit_Thermal.h"     //Library for Thermal Printer
-#include <Wire.h>                 //Library for I2C
-#include "RTClib.h"               //Library for RTC (Clock)
-#include "AT24CX.h"               //Library for EEPROM (Memory)
-#include <LiquidCrystal_I2C.h>    //Library for the LCD
+#include "Adafruit_Thermal.h"     // Library for Thermal Printer
+#include <Wire.h>                 // Library for I2C
+#include "RTClib.h"               // Library for RTC (Clock)
+#include "AT24CX.h"               // Library for EEPROM (Memory)
+#include <LiquidCrystal_I2C.h>    // Library for the LCD
 
 //Macros
-#define inpPin 2                  //Pulse signal pin                   
+#define inpPin 2                  // Pulse signal pin                   
 #define buttonPin1 3              //
 #define buttonPin2 4              //
 #define buttonPin3 5              //
 
 //Variables definition
-volatile int pulse = 0;
-unsigned int total_pulses = 0;
-float totalizer = 0.00;
+volatile int pulse = 0;           // Variable modified inside the external interrupt
+unsigned int total_pulses = 0;    // Total pulses saved inside the EEprom as well
+float totalizer = 0.00;           // Converted total pulses (Output in liters)
 unsigned long time_now = 0;       //
-const int period = 1000;          //1sec loop period
-const int pulses_per_litre = 100;
+const int period = 1000;          // 1sec loop period
+const int pulses_per_litre = 100; // Pulses required to count 1 litre
 
 //Debounce variables
 int buttonState = LOW;      
 int prevState = LOW;        
-long lastDebounce = 0;      // The last time the output pin was toggled
-long debounceDelay = 50;    // The debounce time; increase if the output flickers
+long lastDebounce = 0;            // The last time the output pin was toggled
+long debounceDelay = 50;          // The debounce time; increase if the output flickers
 
 //EEprom Variable
 float read_totalizer = 0.00;
@@ -65,14 +65,14 @@ void setup() {
 void loop() 
 { 
   //Read the EEPROM and get the latest totalizer value
-  total_pulses = EepromRTC.readFloat(1);   //leer desde memoria en la posicion 1
+  total_pulses = EepromRTC.readFloat(1);           //leer desde memoria en la posicion 1
   
   //Pulse measuring
   pulse=0;
   time_now = millis();                             //Delay setups
   while(millis() - time_now <= period){}           //Equivalent to delay(1000) instruction
 
-  Serial.print("Pulses per second: ");  //Debugging pulses
+  Serial.print("Pulses per second: ");             //Debugging pulses
   Serial.println(pulse); 
   
   DateTime now = rtc.now();                        //Initializes the rtc value
@@ -84,7 +84,7 @@ void loop()
   totalizer = float(total_pulses)/pulses_per_litre; 
   
   interrupts();
-
+  
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
 
@@ -104,7 +104,7 @@ void loop()
 //FUNCTIONS. Called inside void loop
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-//Interrupt function
+//Interrupt function for pulses
 void count_pulse() 
 {
   pulse++; 
@@ -161,9 +161,8 @@ void data_ticket(DateTime date, float read_totalizer){
 void lcd_display(float totalizer){
   lcd.setCursor(0, 0);          //Sets cursor at first row
   lcd.print("Total litros:");
-  //Serial.println("Total litros:");
+  
   lcd.setCursor(0, 1);          //Sets cursor at second row
   lcd.print(totalizer);
-  //Serial.println(totalizer);
     
 }
