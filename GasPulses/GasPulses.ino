@@ -3,7 +3,7 @@
 #include <Wire.h>                 //Library for I2C
 #include "RTClib.h"               //Library for RTC (Clock)
 #include "AT24CX.h"               //Library for EEPROM (Memory)
-#include "LiquidCrystal_I2C.h"    //Library for the LCD
+#include <LiquidCrystal_I2C.h>    //Library for the LCD
 
 //Macros
 #define inpPin 2                  //Pulse signal pin                   
@@ -24,6 +24,9 @@ int buttonState = LOW;
 int prevState = LOW;        
 long lastDebounce = 0;      // The last time the output pin was toggled
 long debounceDelay = 50;    // The debounce time; increase if the output flickers
+
+//EEprom Variable
+float read_totalizer = 0.00;
 
 //Object rtc
 RTC_DS1307 rtc;
@@ -53,7 +56,7 @@ void setup() {
   
   //Initiate the LCD:
   lcd.init();
-  lcd.backlight();
+  lcd.setBacklight(1);
 } 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,30 +64,40 @@ void setup() {
 ///////////////////////////////////////////////////////////////////////////////////////////////
 void loop() 
 { 
+  //Read the EEPROM and get the latest totalizer value
+  total_pulses = EepromRTC.readFloat(1);   //leer desde memoria en la posicion 1
+  
   //Pulse measuring
   pulse=0;
   time_now = millis();                             //Delay setups
   while(millis() - time_now <= period){}           //Equivalent to delay(1000) instruction
+
+  Serial.print("Pulses per second: ");  //Debugging pulses
+  Serial.println(pulse); 
   
- 
-/*  Serial.print("Pulses per second: ");  //Debugging pulses
-  Serial.println(pulse); */
-  //Write on the EEPROM the last totalizer value
-  EepromRTC.writeFloat(1, totalizer); 
-  DateTime now = rtc.now();
-  data_ticket(now);                          //Calls printing function (Date, Totalizer,etc)   
+  DateTime now = rtc.now();                        //Initializes the rtc value
   
   noInterrupts();
+  
   //Totalizer logic
   total_pulses += pulse;        
   totalizer = float(total_pulses)/pulses_per_litre; 
+  
   interrupts();
+
+  //Write on the EEPROM the current totalizer value
+  EepromRTC.writeFloat(1, total_pulses); 
+
+  //Calls printing function (Date, Totalizer,etc)
+  data_ticket(now, totalizer);                                   
+  
+  //Displays the totalizer value on the LCD
+  lcd_display(totalizer);
   
   //Button function
   buttonState = digitalRead(buttonPin1);
 
-  //Displays the totalizer value on the LCD
-  lcd_display(totalizer);
+
 } 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,7 +106,7 @@ void loop()
 
 //Interrupt function
 void count_pulse() 
-{ 
+{
   pulse++; 
 } 
 
@@ -115,7 +128,7 @@ bool debounce(){
 
 
 //Print ticket format
-void data_ticket(DateTime date){
+void data_ticket(DateTime date, float read_totalizer){
      
   Serial.println("               Lupqsa");
   Serial.println("             S.A de C.V");
@@ -141,14 +154,16 @@ void data_ticket(DateTime date){
   Serial.println(date.minute(), DEC);
   
   Serial.println("Litros: ");  
-  float read_totalizer = EepromRTC.readFloat(1); //leer desde memoria en la posicion 1
   Serial.println(read_totalizer);
 }
 
+//LCD Display Function
 void lcd_display(float totalizer){
   lcd.setCursor(0, 0);          //Sets cursor at first row
   lcd.print("Total litros:");
+  //Serial.println("Total litros:");
   lcd.setCursor(0, 1);          //Sets cursor at second row
   lcd.print(totalizer);
+  //Serial.println(totalizer);
     
 }
