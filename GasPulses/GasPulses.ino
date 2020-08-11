@@ -17,7 +17,7 @@ unsigned int total_pulses = 0;
 float totalizer = 0.00;
 unsigned long time_now = 0;       //
 const int period = 1000;          //1sec loop period
-const int pulses_per_litre = 90;
+const int pulses_per_litre = 100;
 
 //Debounce variables
 int buttonState = LOW;      
