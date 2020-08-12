@@ -23,7 +23,7 @@ const int pulses_per_litre = 100; // Pulses required to count 1 litre of diesel
 int ticket;
 
 //Debounce variables [UNUSED]
-bool buttonState = LOW;      
+bool buttonState = LOW;           
 int prevState = LOW;        
 long lastDebounce = 0;            // The last time the output pin was toggled
 long debounceDelay = 50;          // The debounce time; increase if the output flickers
@@ -53,13 +53,15 @@ void setup() {
     Serial.println("ERROR");
     return;
   }  
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // set time in the rtc when uploading code
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
   
   //Initiate the LCD:
   lcd.init();
   lcd.setBacklight(1);
 
-  //Initializes ticket number to 1 
+  //Initializes total pulses memory to clean trash in memory
+  EepromRTC.writeFloat(1, 0.0);
+  //Initializes ticket number to 1 and clean trash in memory
   EepromRTC.writeInt(5, 1);
 } 
   
@@ -83,8 +85,8 @@ void loop()
   DateTime now = rtc.now();                        
 
   //If next day, restarts ticket number count
-  if((now.hour() == 19) && (now.minute() == 57)){
-    ticket = 1;
+  if((now.hour() == 23) && (now.minute() == 59) && (now.second() == 59)){  //Resets at 7:57 as of right now
+    EepromRTC.writeInt(5, 1);
   }
 
   // SENSIBLE CODE HERE ///////////////////////////////////////////////////////////////////////////////////////////////////////////
