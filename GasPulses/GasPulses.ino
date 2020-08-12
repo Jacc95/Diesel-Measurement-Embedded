@@ -51,22 +51,28 @@ void setup() {
   pinMode(buttonPin1, INPUT);                 // Reset signal
   pinMode(buttonPin2, INPUT);                 // Printer signal
   attachInterrupt(0, count_pulse, RISING);    // 0 stands for PIN2 of the Arduino board
+
+  //LCD Setup
+  lcd.init();                                 // Initializes LCD object
+  lcd.setBacklight(1);                        // Sets light to max
   
   //RTC Configuration
   if(!rtc.begin()){
     Serial.println("ERROR");
     return;
   }  
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
-  
-  //LCD Setup
-  lcd.init();                                 // Initializes LCD object
-  lcd.setBacklight(1);                        // Sets light to max
 
-  //EEprom Initializing
-  EepromRTC.writeFloat(1, 0.0);               // Initializes total pulses memory to clean trash in memory
-  EepromRTC.writeInt(5, 1);                   // Initializes ticket number to 1 and clean trash in memory
-  EepromRTC.writeFloat(7, 0.0);               // Initializes prev pulses memory to clean trash in memory 
+  //Code that runs only when EEprom & RTC have not been set before. 
+  //To INITIALIZE the variables RUN INITIALIZE.ino first
+  if(EepromRTC.read(11)){
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
+  
+    //EEprom Initializing
+    EepromRTC.writeFloat(1, 0.0);               // Initializes total pulses memory to clean trash in memory
+    EepromRTC.writeInt(5, 1);                   // Initializes ticket number to 1 and clean trash in memory
+    EepromRTC.writeFloat(7, 0.0);               // Initializes prev pulses memory to clean trash in memory 
+    EepromRTC.write(11, 0);                     // Tells the Arduino variables can only be initialized through INITIALIZE.INO
+  }
 } 
   
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -196,7 +202,8 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
   Serial.println(carga);
   Serial.println("Totalizer: ");  
   Serial.println(read_totalizer);
-  
+  Serial.println(" ");
+  Serial.println(" ");
 }
 
 
