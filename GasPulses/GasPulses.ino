@@ -23,18 +23,19 @@ const int period = 1000;          // 1sec loop period
 const int pulses_per_litre = 100; // Pulses required to count 1 litre of diesel
 
 //Printing variables
-int ticket;
+int ticket;                       // Ticket number
 
 //Debounce variables [UNUSED]
+/*
 bool buttonState = LOW;           
 int prevState = LOW;        
 long lastDebounce = 0;            // The last time the output pin was toggled
-long debounceDelay = 50;          // The debounce time; increase if the output flickers
+long debounceDelay = 50;          // The debounce time; increase if the output flickers*/
 
 //Object rtc
 RTC_DS1307 rtc;
 
-//Object EepromRTC (Memory)
+//Object EEpromRTC (Memory)
 AT24C32 EepromRTC;
 
 //Object lcd
@@ -58,16 +59,14 @@ void setup() {
   }  
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
   
-  //Initiate the LCD:
-  lcd.init();
-  lcd.setBacklight(1);
+  //LCD Setup
+  lcd.init();                                 // Initializes LCD object
+  lcd.setBacklight(1);                        // Sets light to max
 
-  //Initializes total pulses memory to clean trash in memory
-  EepromRTC.writeFloat(1, 0.0);
-  //Initializes ticket number to 1 and clean trash in memory
-  EepromRTC.writeInt(5, 1);
-  //Initializes prev pulses memory to clean trash in memory 
-  EepromRTC.writeFloat(7, 0.0);
+  //EEprom Initializing
+  EepromRTC.writeFloat(1, 0.0);               // Initializes total pulses memory to clean trash in memory
+  EepromRTC.writeInt(5, 1);                   // Initializes ticket number to 1 and clean trash in memory
+  EepromRTC.writeFloat(7, 0.0);               // Initializes prev pulses memory to clean trash in memory 
 } 
   
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,7 +75,7 @@ void setup() {
 void loop() 
 { 
   //Read the EEPROM and get the latest totalizer value
-  total_pulses = EepromRTC.readFloat(1);           //leer desde memoria en la posicion 1
+  total_pulses = EepromRTC.readFloat(1);           //Read memory from address 1 to 4
   
   //Pulse measuring
   pulse=0;
@@ -103,16 +102,15 @@ void loop()
   interrupts();
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  
-  //Total pulses to totalizer (litres) conversion
-  totalizer = float(total_pulses)/pulses_per_litre; 
-
   //Resets totalizer when Reset button is pressed
   if(digitalRead(buttonPin1) == HIGH){
     lcd.clear();
     reset();
   }
-  
+    
+  //Total pulses to totalizer (litres) conversion
+  totalizer = float(total_pulses)/pulses_per_litre; 
+
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
 
@@ -126,10 +124,10 @@ void loop()
   if(digitalRead(buttonPin2) == HIGH){              // Calls printing function (Date, Totalizer,etc) when button is pressed
     
     data_ticket(now, totalizer, ticket,carga);
-    ticket++;                                       //Increment ticket number
+    ticket++;                                       // Increment ticket number
     
     prev_pulses = total_pulses;
-    EepromRTC.writeFloat(7, prev_pulses);             //Writes prev pulses into EEPROM
+    EepromRTC.writeFloat(7, prev_pulses);           // Writes prev pulses into EEPROM
     
   }
   
@@ -153,6 +151,7 @@ void count_pulse()
 
 
 //Debouncing function [UNUSED]
+/*
 bool debounce(){
   buttonState = digitalRead(buttonPin1);
   
@@ -165,7 +164,7 @@ bool debounce(){
       }
     }
   }
-}
+}*/
 
 
 //Print ticket format
@@ -214,6 +213,6 @@ void lcd_display(float carga){
 
 //Totalizer reset function
 void reset(){
-  total_pulses = 0;
+  total_pulses = 0;             //Totalizer reset to zero
 }
  
