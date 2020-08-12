@@ -116,13 +116,14 @@ void loop()
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
 
+  //Calculate the currente charge
+   prev_pulses = EepromRTC.readFloat(7);           
+   prev_totalizer = float(prev_pulses)/pulses_per_litre;
+   carga = totalizer - prev_totalizer;
+    
   //Printing
   ticket = EepromRTC.readInt(5);                    // Continues from last ticket number
   if(digitalRead(buttonPin2) == HIGH){              // Calls printing function (Date, Totalizer,etc) when button is pressed
-    
-    prev_pulses = EepromRTC.readFloat(7);           
-    prev_totalizer = float(prev_pulses)/pulses_per_litre;
-    carga = totalizer - prev_totalizer;
     
     data_ticket(now, totalizer, ticket,carga);
     ticket++;                                       //Increment ticket number
@@ -135,7 +136,7 @@ void loop()
   EepromRTC.writeInt(5, ticket);                    // Writes next ticket number into EEPROM               
   
   //Displays the totalizer value on the LCD
-  lcd_display(totalizer);
+  lcd_display(carga);
  
 } 
 
@@ -201,12 +202,12 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
 
 
 //LCD Display Function
-void lcd_display(float totalizer){
+void lcd_display(float carga){
   lcd.setCursor(0, 0);          //Sets cursor at first row
   lcd.print("Total litros:");
   
   lcd.setCursor(0, 1);          //Sets cursor at second row
-  lcd.print(totalizer);
+  lcd.print(carga);
     
 }
 
