@@ -83,8 +83,9 @@ void loop()
   DateTime now = rtc.now();                        
 
   //If next day, restarts ticket number count
-  if((now.hour() == 19) && (now.minute() == 57)){
+  if((now.hour() == 8) && (now.minute() == 55) && (now.second() == 1)){
     ticket = 1;
+    EepromRTC.writeInt(5, ticket);
   }
 
   // SENSIBLE CODE HERE ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,7 +112,6 @@ void loop()
 
   //Printing
   ticket = EepromRTC.readInt(5);                    // Continues from last ticket number
-  
   if(digitalRead(buttonPin2) == HIGH){              // Calls printing function (Date, Totalizer,etc) when button is pressed
     data_ticket(now, totalizer, ticket);
     ticket++;                                       //Increment ticket number
