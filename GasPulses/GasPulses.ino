@@ -14,7 +14,10 @@
 //Variables definition
 volatile int pulse = 0;           // Variable modified inside the external interrupt
 unsigned int total_pulses = 0;    // Total pulses saved inside the EEprom as well
+unsigned int prev_pulses = 0;     //Prev pulses saved inside the EEprom as well
 float totalizer = 0.00;           // Converted total pulses (Output in liters)
+float prev_totalizer = 0.00;      // Converted prev pulses (Output in liters)
+float carga = 0.0;
 unsigned long time_now = 0;       // Variable used to compare
 const int period = 1000;          // 1sec loop period
 const int pulses_per_litre = 100; // Pulses required to count 1 litre of diesel
@@ -63,6 +66,8 @@ void setup() {
   EepromRTC.writeFloat(1, 0.0);
   //Initializes ticket number to 1 and clean trash in memory
   EepromRTC.writeInt(5, 1);
+  //Initializes prev pulses memory to clean trash in memory 
+  EepromRTC.writeFloat(7, 0.0);
 } 
   
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,17 +119,26 @@ void loop()
   //Printing
   ticket = EepromRTC.readInt(5);                    // Continues from last ticket number
   if(digitalRead(buttonPin2) == HIGH){              // Calls printing function (Date, Totalizer,etc) when button is pressed
-    data_ticket(now, totalizer, ticket);
+    
+    prev_pulses = EepromRTC.readFloat(7);           
+    prev_totalizer = float(prev_pulses)/pulses_per_litre;
+    carga = totalizer - prev_totalizer;
+    
+    data_ticket(now, totalizer, ticket,carga);
     ticket++;                                       //Increment ticket number
-  }             
+    
+    prev_pulses = total_pulses;
+    EepromRTC.writeFloat(7, prev_pulses);             //Writes prev pulses into EEPROM
+    
+  }
+  
   EepromRTC.writeInt(5, ticket);                    // Writes next ticket number into EEPROM               
   
   //Displays the totalizer value on the LCD
   lcd_display(totalizer);
-  
-
-
+ 
 } 
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //FUNCTIONS. Called inside void loop
@@ -154,7 +168,7 @@ bool debounce(){
 
 
 //Print ticket format
-void data_ticket(DateTime date, float read_totalizer, int ticket){
+void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
   
   Serial.println("               Lupqsa");
   Serial.println("             S.A de C.V");
@@ -178,8 +192,9 @@ void data_ticket(DateTime date, float read_totalizer, int ticket){
     Serial.print("0");  
   }
   Serial.println(date.minute(), DEC);
-  
-  Serial.println("Acumulado en litros: ");  
+  Serial.println("Carga: ");  
+  Serial.println(carga);
+  Serial.println("Totalizer: ");  
   Serial.println(read_totalizer);
   
 }
