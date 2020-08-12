@@ -20,7 +20,7 @@ const int period = 1000;          // 1sec loop period
 const int pulses_per_litre = 100; // Pulses required to count 1 litre of diesel
 
 //Printing variables
-int ticket = 0;
+int ticket;
 
 //Debounce variables [UNUSED]
 bool buttonState = LOW;      
@@ -58,8 +58,11 @@ void setup() {
   //Initiate the LCD:
   lcd.init();
   lcd.setBacklight(1);
-} 
 
+  //Initializes ticket number to 1 
+  EepromRTC.writeInt(5, 1);
+} 
+  
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //MAIN FUNCTION. Runs continuously
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,10 +83,9 @@ void loop()
   DateTime now = rtc.now();                        
 
   //If next day, restarts ticket number count
-  if((now.hour() == 23) && (now.minute() == 59)){
+  if((now.hour() == 19) && (now.minute() == 57)){
     ticket = 1;
   }
-
 
   // SENSIBLE CODE HERE ///////////////////////////////////////////////////////////////////////////////////////////////////////////
   noInterrupts();
@@ -100,15 +102,20 @@ void loop()
 
   //Resets totalizer when Reset button is pressed
   if(digitalRead(buttonPin1) == HIGH){
-    reset();}
+    lcd.clear();
+    reset();
+  }
   
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
 
   //Printing
   ticket = EepromRTC.readInt(5);                    // Continues from last ticket number
+  
   if(digitalRead(buttonPin2) == HIGH){              // Calls printing function (Date, Totalizer,etc) when button is pressed
-    data_ticket(now, totalizer, ticket);}             
+    data_ticket(now, totalizer, ticket);
+    ticket++;                                       //Increment ticket number
+  }             
   EepromRTC.writeInt(5, ticket);                    // Writes next ticket number into EEPROM               
   
   //Displays the totalizer value on the LCD
@@ -173,9 +180,6 @@ void data_ticket(DateTime date, float read_totalizer, int ticket){
   
   Serial.println("Acumulado en litros: ");  
   Serial.println(read_totalizer);
-
-  //Increment ticket number
-  ticket++;
   
 }
 
