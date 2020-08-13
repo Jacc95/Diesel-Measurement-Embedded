@@ -4,6 +4,8 @@
 #include "RTClib.h"               // Library for RTC (Clock)
 #include "AT24CX.h"               // Library for EEPROM (Memory)
 #include <LiquidCrystal_I2C.h>    // Library for the LCD
+#include <SPI.h>                  // Library for the RFID
+#include <MFRC522.h>              // Library for the RFID
 
 //Macros
 #define inpPin 2                  // Pulse signal pin                   
@@ -39,7 +41,17 @@ RTC_DS1307 rtc;
 AT24C32 EepromRTC;
 
 //Object lcd
-LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2); // Change to (0x27,16,2) for 16x2 LCD.
+LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);    // Change to (0x27,16,2) for 16x2 LCD.
+
+//RFID variables
+#define RST_PIN  9                                         // Constant to reference reset pin
+#define SS_PIN  10                                         // Constant to reference pin of slave select 
+
+MFRC522 mfrc522(SS_PIN, RST_PIN);                          // Create mfrc522 object by sending slave select and reset pins 
+
+byte LecturaUID[4];                                        // Create array to store the UID read
+byte Usuario1[4]= {0xD9, 0x3A, 0x08, 0xBA} ;               // Card UID needed to reset
+byte Usuario2[4]= {0x29, 0xB4, 0xA7, 0xB2} ;               // Card2 UID needed to reset
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //MAIN FUNCTION. Runs once
@@ -55,6 +67,11 @@ void setup() {
   //LCD Setup
   lcd.init();                                 // Initializes LCD object
   lcd.setBacklight(1);                        // Sets light to max
+  lcd.clear();                                // Clears LCD screen
+
+  //RFID Setup
+  SPI.begin();                                // Initialize SPI bus
+  mfrc522.PCD_Init();                         // Initialize reader module
   
   //RTC Configuration
   if(!rtc.begin()){
@@ -81,7 +98,7 @@ void setup() {
 void loop() 
 { 
   //Read the EEPROM and get the latest totalizer value
-  total_pulses = EepromRTC.readFloat(1);           //Read memory from address 1 to 4
+  total_pulses = EepromRTC.readFloat(1);           //Read memory pulses from address 1 to 4
   
   //Pulse measuring
   pulse=0;
@@ -108,10 +125,9 @@ void loop()
   interrupts();
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  //Resets totalizer when Reset button is pressed
-  if(digitalRead(buttonPin1) == HIGH){
-    lcd.clear();
-    reset();
+  //Resets totalizer when Reset Card is passed
+  if (mfrc522.PICC_IsNewCardPresent()) {
+    rfid();
   }
     
   //Total pulses to totalizer (litres) conversion
@@ -120,8 +136,8 @@ void loop()
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
 
-  //Calculate the currente charge
-   prev_pulses = EepromRTC.readFloat(7);           
+  //Calculate the currente charge 
+   prev_pulses = EepromRTC.readFloat(7);            //Read previous pulses from address 7 to 10          
    prev_totalizer = float(prev_pulses)/pulses_per_litre;
    carga = totalizer - prev_totalizer;
     
@@ -203,7 +219,10 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
   Serial.println("Totalizer: ");  
   Serial.println(read_totalizer);
   Serial.println(" ");
+  Serial.println("   -----------------------------");
   Serial.println(" ");
+
+  lcd.clear();                                // Clears LCD screen
 }
 
 
@@ -218,8 +237,46 @@ void lcd_display(float carga){
 }
 
 
-//Totalizer reset function
+//Reset Totalizer function
 void reset(){
   total_pulses = 0;             //Totalizer reset to zero
+  EepromRTC.writeFloat(7, 0);
+  EepromRTC.writeInt(5, 1);
 }
- 
+
+
+//RFID function
+void rfid(){
+  // si no puede obtener datos de la tarjeta
+  if ( ! mfrc522.PICC_ReadCardSerial())  
+      return;   
+      
+   for (byte i = 0; i < mfrc522.uid.size; i++) {    // loop goes through the UID one byte at a time
+      //Serial.print(mfrc522.uid.uidByte[i], HEX);    // prints the byte of the UID read in hexadecimal
+      LecturaUID[i]=mfrc522.uid.uidByte[i];         // stores the byte of the UID read in an array   
+   }
+                             
+                    
+   if(comparaUID(LecturaUID, Usuario1)){   
+      reset(); 
+      lcd.clear();                                // Clears LCD screen
+   } else if(comparaUID(LecturaUID, Usuario2)){
+      reset(); 
+      lcd.clear();
+   }
+   else           // si retorna falso
+      Serial.println("Llave no valida");            
+                  
+   mfrc522.PICC_HaltA();     //card communication stops              
+}
+
+
+//comparaUID is used on RFID function
+boolean comparaUID(byte lectura[],byte usuario[])
+{
+  for (byte i=0; i < mfrc522.uid.size; i++){      // loop goes through the UID one byte at a time
+    if(lectura[i] != usuario[i])                 // if byte of UID read is different from user
+      return(false);                            
+    }
+  return(true);                               //if the 4 bytes match it returns true
+}
