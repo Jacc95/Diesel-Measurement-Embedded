@@ -1,0 +1,5 @@
+#include "Adafruit_Thermal.h"     // Library for Thermal Printer
+#include <Wire.h>                 // Library for I2C
+#include "RTClib.h"               // Library for RTC (Clock)
+#include "AT24CX.h"               // Library for EEPROM (Memory)
+#include <LiquidCrystal_I2C.h>    // Library for the LCD
