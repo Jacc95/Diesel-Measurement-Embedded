@@ -11,15 +11,14 @@
 #define inpPin 2                  // Pulse signal pin                   
 #define buttonPin1 4              // Reset button
 #define buttonPin2 5              // Print button
-#define buttonPin3 6              //
 
 //Variables definition
 volatile int pulse = 0;           // Variable modified inside the external interrupt
 unsigned int total_pulses = 0;    // Total pulses saved inside the EEprom as well
-unsigned int prev_pulses = 0;     //Prev pulses saved inside the EEprom as well
+unsigned int prev_pulses = 0;     // Prev pulses saved inside the EEprom as well
 float totalizer = 0.00;           // Converted total pulses (Output in liters)
 float prev_totalizer = 0.00;      // Converted prev pulses (Output in liters)
-float carga = 0.0;
+float carga = 0.0;                // Diesel litres per charge
 unsigned long time_now = 0;       // Variable used to compare
 const int period = 1000;          // 1sec loop period
 const int pulses_per_litre = 100; // Pulses required to count 1 litre of diesel
@@ -85,10 +84,10 @@ void setup() {
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
   
     //EEprom Initializing
-    EepromRTC.writeFloat(1, 0.0);               // Initializes total pulses memory to clean trash in memory
-    EepromRTC.writeInt(5, 1);                   // Initializes ticket number to 1 and clean trash in memory
-    EepromRTC.writeFloat(7, 0.0);               // Initializes prev pulses memory to clean trash in memory 
-    EepromRTC.write(11, 0);                     // Tells the Arduino variables can only be initialized through INITIALIZE.INO
+    EepromRTC.writeFloat(1, 0.0);                   // Initializes total pulses memory to clean trash in memory
+    EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
+    EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
+    EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
   }
 } 
   
