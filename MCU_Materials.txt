@@ -1,0 +1,4 @@
+- 2  x 22pF capacitors
+- 1  x 16MHz Oscillator
+- 1k x ohm resistor
+- 1  x ATMega328P
