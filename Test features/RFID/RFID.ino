@@ -1,8 +1,8 @@
 #include <SPI.h>      // incluye libreria bus SPI
 #include <MFRC522.h>      // incluye libreria especifica para MFRC522
 
-#define RST_PIN  5      // constante para referenciar pin de reset
-#define SS_PIN  53      // constante para referenciar pin de slave select
+#define RST_PIN  9      // constante para referenciar pin de reset
+#define SS_PIN  10      // constante para referenciar pin de slave select
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // crea objeto mfrc522 enviando pines de slave select y reset
 
@@ -41,7 +41,7 @@ void loop() {
           if(comparaUID(LecturaUID, Usuario1))    // llama a funcion comparaUID con Usuario1
             Serial.println("Bienvenido Usuario 1"); // si retorna verdadero muestra texto bienvenida
           else if(comparaUID(LecturaUID, Usuario2)) // llama a funcion comparaUID con Usuario2
-            Serial.println("Bienvenido Usuario 2"); // si retorna verdadero muestra texto bienvenida
+           Serial.println("Bienvenido Usuario 2"); // si retorna verdadero muestra texto bienvenida
            else           // si retorna falso
             Serial.println("No te conozco");    // muestra texto equivalente a acceso denegado          
                   
