@@ -59,7 +59,7 @@ void setup() {
   Wire.begin();
   Serial.begin(9600);                         // Opens Serial Monitor
   pinMode(inpPin, INPUT);                     // Input signal PIN2
-  pinMode(buttonPin1, INPUT);                 // Reset signal
+//  pinMode(buttonPin1, INPUT);                 // Reset signal
   pinMode(buttonPin2, INPUT);                 // Printer signal
   attachInterrupt(0, count_pulse, RISING);    // 0 stands for PIN2 of the Arduino board
 
