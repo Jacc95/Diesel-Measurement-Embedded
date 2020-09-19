@@ -1,9 +1,11 @@
+//RUN INITIALIZE.INO FIRST TO RUN FROM UPLOADING TIME
 #include <Wire.h>
 #include "RTClib.h"
 
 RTC_DS1307 rtc;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
 
 void setup () 
 {
@@ -12,24 +14,22 @@ void setup ()
 
   if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
-    while (1);
+    return;
   }
 
-  if (!rtc.isrunning()) {
-    Serial.println("RTC lost power, lets set the time!");
+  if(EepromRTC.read(11)){
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
   
-  // Comment out below lines once you set the date & time.
-    // Following line sets the RTC to the date & time this sketch was compiled
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    //EEprom Initializing
+    EepromRTC.writeFloat(1, 0.0);                   // Initializes total pulses memory to clean trash in memory
+    EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
+    EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
+    EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
   }
 }
 
 void loop () 
-{
-    interrupts();
-    delay(1000);
-    noInterrupts();
-    
+{   
     DateTime now = rtc.now();
     
     Serial.println("Current Date & Time: ");
