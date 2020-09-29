@@ -23,7 +23,7 @@ float prev_totalizer = 0.00;      // Converted prev pulses (Output in liters)
 float carga = 0.0;                // Diesel litres per charge
 unsigned long time_now = 0;       // Variable used to compare
 int pulses_per_litre = 100;       // Pulses required to count 1 litre of diesel
-int jug_size = 10;                     // 10 or 20 litres depending on the switch
+int jug_size = 10;                // 10 or 20 litres depending on the switch
 
 //Calibration variables
 unsigned int total_pulses_cal;    // Total pulses saved inside the EEprom as well
@@ -93,6 +93,7 @@ void setup() {
     EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
     EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
     EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
+    EepromRTC.writeFloat(12, 100.0);                // Initializes pulses_per_litre variable at 100.0
   }
 } 
   
