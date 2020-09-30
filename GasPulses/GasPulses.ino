@@ -158,6 +158,11 @@ void loop()
     total_pulses_cal = 0;
   }
   while(calibration_flag == true){                                               // Calibration procedure
+    lcd.setCursor(0, 0);          //Sets cursor at first row
+    lcd.print("MODO Calibrar");
+  
+    lcd.setCursor(0, 1);          //Sets cursor at second row
+    lcd.print("esperando...");
                                                                                  // DIsplay Modo Calibrando...
     calibration();                                                               // 1 sec delay is included here
     if(digitalRead(buttonPin1) == HIGH){                                         // Press the button again to finish calib mode
