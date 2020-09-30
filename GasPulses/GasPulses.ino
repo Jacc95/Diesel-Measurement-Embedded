@@ -11,7 +11,7 @@
 #define inpPin 2                  // Pulse signal pin                   
 #define buttonPin1 4              // Calibration button
 #define buttonPin2 5              // Print button
-#define switch_calib 6            // Calibration switch between 10 or 20 litres recipient
+#define switch_cal 6            // Calibration switch between 10 or 20 litres recipient
 #define period 1000               // 1sec loop period
 
 //Variables definition
@@ -27,6 +27,7 @@ int jug_size = 10;                // 10 or 20 litres depending on the switch
 
 //Calibration variables
 unsigned int total_pulses_cal;    // Total pulses saved inside the EEprom as well
+bool calibration_flag = false;    // Calibration condition flag
 
 //Printing variables
 int ticket;                       // Ticket number
@@ -103,7 +104,7 @@ void setup() {
 void loop() 
 { 
   //Read the EEPROM and get the latest totalizer value
-  total_pulses = EepromRTC.readFloat(1);           //Read memory pulses from address 1 to 4.
+  total_pulses = EepromRTC.readFloat(1);           // Read memory pulses from address 1 to 4.
   
   //Pulse measuring
   pulse=0;
@@ -137,7 +138,7 @@ void loop()
   EepromRTC.writeFloat(1, total_pulses); 
 
   //Calculate the currente charge 
-   prev_pulses = EepromRTC.readFloat(7);            //Read previous pulses from address 7 to 10          
+   prev_pulses = EepromRTC.readFloat(7);                                    //Read previous pulses from address 7 to 10          
    prev_totalizer = float(prev_pulses)/pulses_per_litre;
    carga = totalizer - prev_totalizer;
 
@@ -145,22 +146,25 @@ void loop()
   //Calibration
   /////////////////////////////////////////////////////////////////////////////////////////////
   //Switch between 10 or 20 litres
-  if(switch_calib == HIGH){
-    jug_size = 10;
+  if(switch_cal == HIGH){
+    jug_size = 10;                                                               // 10 Liters jug. Vcc
   } else{
-    jug_size = 20;
+    jug_size = 20;                                                               // 20 Liters jug. GND
   }
   
   //Starts the calibration procedure when the button is pressed
-  if(digitalRead(buttonPin1) == HIGH){              // Press the button to enter calibration mode
+  if(digitalRead(buttonPin1) == HIGH && calibration_flag == false){              // Press the button to enter calibration mode
     calibration_flag = true;
     total_pulses_cal = 0;
   }
-  while(calibration_flag == true){                  // Calibration procedure
-    calibration();
-    if(digitalRead(buttonPin1) == HIGH){            // Press the button again to finish calib mode
-      calibration_flag = false;
-      pulses_per_litre = float(total_pulses_cal)/jug_size;
+  while(calibration_flag == true){                                               // Calibration procedure
+                                                                                 // DIsplay Modo Calibrando...
+    calibration();                                                               // 1 sec delay is included here
+    if(digitalRead(buttonPin1) == HIGH){                                         // Press the button again to finish calib mode
+      calibration_flag = false; 
+      if(total_pulses_cal > 500){                                                // Pulses should be greater than 500 to ensure that it is not a mistake
+        pulses_per_litre = float(total_pulses_cal)/jug_size;
+      }
     }
   }
 
@@ -256,7 +260,7 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
 }
 
 
-//LCD Display Function
+// LCD Display Function
 void lcd_display(float carga){
   lcd.setCursor(0, 0);          //Sets cursor at first row
   lcd.print("Total litros:");
@@ -267,7 +271,7 @@ void lcd_display(float carga){
 }
 
 
-//Reset Totalizer function
+// Reset Totalizer function
 void reset(){
   total_pulses = 0;             //Totalizer reset to zero
   EepromRTC.writeFloat(7, 0);
@@ -275,7 +279,7 @@ void reset(){
 }
 
 
-//RFID function
+// RFID function
 void rfid(){
   // si no puede obtener datos de la tarjeta
   if ( ! mfrc522.PICC_ReadCardSerial())  
@@ -301,7 +305,7 @@ void rfid(){
 }
 
 
-//comparaUID is used on RFID function
+// comparaUID is used on RFID function
 boolean comparaUID(byte lectura[],byte usuario[])
 {
   for (byte i=0; i < mfrc522.uid.size; i++){      // loop goes through the UID one byte at a time
@@ -311,7 +315,7 @@ boolean comparaUID(byte lectura[],byte usuario[])
   return(true);                                   // if the 4 bytes match it returns true
 }
 
-//Calibration function
+// Calibration function
 void calibration(){
   pulse = 0;
   time_now = millis();                            // Delay setups
