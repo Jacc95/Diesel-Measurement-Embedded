@@ -11,7 +11,7 @@
 #define inpPin 2                  // Pulse signal pin                   
 #define buttonPin1 4              // Calibration button
 #define buttonPin2 5              // Print button
-#define switch_cal 6            // Calibration switch between 10 or 20 litres recipient
+#define switch_cal 6              // Calibration switch between 10 or 20 litres recipient
 #define period 1000               // 1sec loop period
 
 //Variables definition
@@ -22,7 +22,7 @@ float totalizer = 0.00;           // Converted total pulses (Output in liters)
 float prev_totalizer = 0.00;      // Converted prev pulses (Output in liters)
 float carga = 0.0;                // Diesel litres per charge
 unsigned long time_now = 0;       // Variable used to compare
-int pulses_per_litre = 100;       // Pulses required to count 1 litre of diesel
+int pulses_per_litre;       // Pulses required to count 1 litre of diesel
 int jug_size = 10;                // 10 or 20 litres depending on the switch
 
 //Calibration variables
@@ -137,6 +137,9 @@ void loop()
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
 
+  //EEPROM read last pulses_per_litre
+  pulses_per_litre = EepromRTC.readFloat(12);
+  
   //Calculate the currente charge 
    prev_pulses = EepromRTC.readFloat(7);                                    //Read previous pulses from address 7 to 10          
    prev_totalizer = float(prev_pulses)/pulses_per_litre;
@@ -168,7 +171,7 @@ void loop()
     if(digitalRead(buttonPin1) == HIGH){                                         // Press the button again to finish calib mode
       calibration_flag = false; 
       if(total_pulses_cal > 500){                                                // Pulses should be greater than 500 to ensure that it is not a mistake
-        pulses_per_litre = float(total_pulses_cal)/jug_size;
+        EepromRTC.writeFloat(12, float(total_pulses_cal)/jug_size);              // Write new constant in memory
       }
     }
   }
