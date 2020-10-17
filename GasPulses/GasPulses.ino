@@ -22,7 +22,7 @@ float totalizer = 0.00;           // Converted total pulses (Output in liters)
 float prev_totalizer = 0.00;      // Converted prev pulses (Output in liters)
 float carga = 0.0;                // Diesel litres per charge
 unsigned long time_now = 0;       // Variable used to compare
-int pulses_per_litre;       // Pulses required to count 1 litre of diesel
+int pulses_per_litre;             // Pulses required to count 1 litre of diesel
 int jug_size = 10;                // 10 or 20 litres depending on the switch
 
 //Calibration variables
@@ -130,15 +130,15 @@ void loop()
   
   interrupts();
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+  //EEPROM read last pulses_per_litre
+  pulses_per_litre = EepromRTC.readFloat(12);
+  Serial.println(pulses_per_litre);
+  
   //Total pulses to totalizer (litres) conversion
   totalizer = float(total_pulses)/pulses_per_litre; 
 
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
-
-  //EEPROM read last pulses_per_litre
-  pulses_per_litre = EepromRTC.readFloat(12);
   
   //Calculate the currente charge 
    prev_pulses = EepromRTC.readFloat(7);                                    //Read previous pulses from address 7 to 10          
