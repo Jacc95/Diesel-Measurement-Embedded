@@ -88,13 +88,7 @@ void setup() {
   //To INITIALIZE the variables RUN INITIALIZE.ino first
   if(EepromRTC.read(11)){
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
-  
-    //EEprom Initializing
-    EepromRTC.writeFloat(1, 0.0);                   // Initializes total pulses memory to clean trash in memory
-    EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
-    EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
-    EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
-    EepromRTC.writeFloat(12, 100.0);                // Initializes pulses_per_litre variable at 100.0
+    reset()                                         //Initializes the variables to be used
   }
 } 
   
@@ -281,9 +275,11 @@ void lcd_display(float carga){
 
 // Reset Totalizer function
 void reset(){
-  total_pulses = 0;             //Totalizer reset to zero
-  EepromRTC.writeFloat(7, 0);
-  EepromRTC.writeInt(5, 1);
+    EepromRTC.writeFloat(1, 0.0);                   // Initializes total pulses memory to clean trash in memory
+    EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
+    EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
+    EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
+    EepromRTC.writeFloat(12, 100.0);                // Initializes pulses_per_litre variable at 100.0
 }
 
 
