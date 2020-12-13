@@ -88,7 +88,7 @@ void setup() {
   //To INITIALIZE the variables RUN INITIALIZE.ino first
   if(EepromRTC.read(11)){
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
-    reset()                                         //Initializes the variables to be used
+    reset();                                         //Initializes the variables to be used
   }
 } 
   
@@ -126,7 +126,7 @@ void loop()
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //EEPROM read last pulses_per_litre
   pulses_per_litre = EepromRTC.readFloat(12);
-  Serial.println(pulses_per_litre);
+  //Serial.println(pulses_per_litre);
   
   //Total pulses to totalizer (litres) conversion
   totalizer = float(total_pulses)/pulses_per_litre; 
@@ -144,9 +144,9 @@ void loop()
   /////////////////////////////////////////////////////////////////////////////////////////////
   //Switch between 10 or 20 litres
   if(switch_cal == HIGH){
-    jug_size = 10;                                                               // 10 Liters jug. Vcc
+    jug_size = 20;                                                               // 10 Liters jug. Vcc
   } else{
-    jug_size = 20;                                                               // 20 Liters jug. GND
+    jug_size = 10;                                                               // 20 Liters jug. GND
   }
   
   //Starts the calibration procedure when the button is pressed
@@ -329,4 +329,6 @@ void calibration(){
   noInterrupts();
   total_pulses_cal += pulse;        
   interrupts();
+
+  lcd.clear();
 }
