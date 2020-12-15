@@ -231,17 +231,17 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
   Serial.println("               Lupqsa");
   Serial.println("             S.A de C.V");
   Serial.println(" ");
-  Serial.println("Medidor: ");
+  Serial.print("Medidor: ");
   Serial.println("L001");
-  Serial.println("Ticket: ");
+  Serial.print("Ticket: ");
   Serial.println(ticket);
-  Serial.println("Fecha");
+  Serial.print("Fecha");
   Serial.print(date.day(), DEC);
   Serial.print('/');
   Serial.print(date.month(), DEC);
   Serial.print('/');
   Serial.println(date.year(), DEC);
-  Serial.println("Hora: ");
+  Serial.print("Hora: ");
   Serial.print(date.hour(), DEC);
   Serial.print(':');
   
@@ -250,9 +250,9 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
     Serial.print("0");  
   }
   Serial.println(date.minute(), DEC);
-  Serial.println("Carga: ");  
+  Serial.print("Carga: ");  
   Serial.println(carga);
-  Serial.println("Totalizer: ");  
+  Serial.print("Totalizer: ");  
   Serial.println(read_totalizer);
   Serial.println(" ");
   Serial.println("   -----------------------------");
