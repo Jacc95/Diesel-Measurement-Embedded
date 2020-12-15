@@ -9,8 +9,10 @@
 
 //Macros
 #define inpPin 2                  // Pulse signal pin                   
-#define buttonPin1 4              // Reset button
+#define buttonPin1 4              // Calibration button
 #define buttonPin2 5              // Print button
+#define switch_cal 6              // Calibration switch between 10 or 20 litres recipient
+#define period 1000               // 1sec loop period
 
 //Variables definition
 volatile int pulse = 0;           // Variable modified inside the external interrupt
@@ -20,8 +22,12 @@ float totalizer = 0.00;           // Converted total pulses (Output in liters)
 float prev_totalizer = 0.00;      // Converted prev pulses (Output in liters)
 float carga = 0.0;                // Diesel litres per charge
 unsigned long time_now = 0;       // Variable used to compare
-const int period = 1000;          // 1sec loop period
-const int pulses_per_litre = 100; // Pulses required to count 1 litre of diesel
+int pulses_per_litre;             // Pulses required to count 1 litre of diesel
+int jug_size = 10;                // 10 or 20 litres depending on the switch
+
+//Calibration variables
+unsigned int total_pulses_cal;    // Total pulses saved inside the EEprom as well
+bool calibration_flag = false;    // Calibration condition flag
 
 //Printing variables
 int ticket;                       // Ticket number
@@ -59,7 +65,7 @@ void setup() {
   Wire.begin();
   Serial.begin(9600);                         // Opens Serial Monitor
   pinMode(inpPin, INPUT);                     // Input signal PIN2
-//  pinMode(buttonPin1, INPUT);                 // Reset signal
+  pinMode(buttonPin1, INPUT);                 // Calibration signal
   pinMode(buttonPin2, INPUT);                 // Printer signal
   attachInterrupt(0, count_pulse, RISING);    // 0 stands for PIN2 of the Arduino board
 
@@ -82,12 +88,7 @@ void setup() {
   //To INITIALIZE the variables RUN INITIALIZE.ino first
   if(EepromRTC.read(11)){
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time in the rtc when uploading code
-  
-    //EEprom Initializing
-    EepromRTC.writeFloat(1, 0.0);                   // Initializes total pulses memory to clean trash in memory
-    EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
-    EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
-    EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
+    reset();                                         //Initializes the variables to be used
   }
 } 
   
@@ -97,7 +98,7 @@ void setup() {
 void loop() 
 { 
   //Read the EEPROM and get the latest totalizer value
-  total_pulses = EepromRTC.readFloat(1);           //Read memory pulses from address 1 to 4
+  total_pulses = EepromRTC.readFloat(1);           // Read memory pulses from address 1 to 4.
   
   //Pulse measuring
   pulse=0;
@@ -123,23 +124,60 @@ void loop()
   
   interrupts();
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  //Resets totalizer when Reset Card is passed
-  if (mfrc522.PICC_IsNewCardPresent()) {
-    rfid();
-  }
-    
+  //EEPROM read last pulses_per_litre
+  pulses_per_litre = EepromRTC.readFloat(12);
+  //Serial.println(pulses_per_litre);
+  
   //Total pulses to totalizer (litres) conversion
   totalizer = float(total_pulses)/pulses_per_litre; 
 
   //Write on the EEPROM the current totalizer value
   EepromRTC.writeFloat(1, total_pulses); 
-
+  
   //Calculate the currente charge 
-   prev_pulses = EepromRTC.readFloat(7);            //Read previous pulses from address 7 to 10          
+   prev_pulses = EepromRTC.readFloat(7);                                    //Read previous pulses from address 7 to 10          
    prev_totalizer = float(prev_pulses)/pulses_per_litre;
    carga = totalizer - prev_totalizer;
-    
+
+  /////////////////////////////////////////////////////////////////////////////////////////////
+  //Calibration
+  /////////////////////////////////////////////////////////////////////////////////////////////
+  //Switch between 10 or 20 litres
+  if(switch_cal == HIGH){
+    jug_size = 20;                                                               // 10 Liters jug. Vcc
+  } else{
+    jug_size = 10;                                                               // 20 Liters jug. GND
+  }
+  
+  //Starts the calibration procedure when the button is pressed
+  if(digitalRead(buttonPin1) == HIGH && calibration_flag == false){              // Press the button to enter calibration mode
+    calibration_flag = true;
+    total_pulses_cal = 0;
+  }
+  while(calibration_flag == true){                                               // Calibration procedure
+    lcd.setCursor(0, 0);          //Sets cursor at first row
+    lcd.print("MODO Calibrar");
+  
+    lcd.setCursor(0, 1);          //Sets cursor at second row
+    lcd.print("esperando...");
+                                                                                 // DIsplay Modo Calibrando...
+    calibration();                                                               // 1 sec delay is included here
+    if(digitalRead(buttonPin1) == HIGH){                                         // Press the button again to finish calib mode
+      calibration_flag = false; 
+      if(total_pulses_cal > 500){                                                // Pulses should be greater than 500 to ensure that it is not a mistake
+        EepromRTC.writeFloat(12, float(total_pulses_cal)/jug_size);              // Write new constant in memory
+      }
+    }
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////
+  //Other functions
+  ///////////////////////////////////////////////////////////////////////////////////////////////
+  //Resets totalizer when Reset Card is passed
+  if (mfrc522.PICC_IsNewCardPresent()) {
+    rfid();
+  }
+  
   //Printing
   ticket = EepromRTC.readInt(5);                    // Continues from last ticket number
   if(digitalRead(buttonPin2) == HIGH){              // Calls printing function (Date, Totalizer,etc) when button is pressed
@@ -151,7 +189,6 @@ void loop()
     EepromRTC.writeFloat(7, prev_pulses);           // Writes prev pulses into EEPROM
     
   }
-  
   EepromRTC.writeInt(5, ticket);                    // Writes next ticket number into EEPROM               
   
   //Displays the totalizer value on the LCD
@@ -194,17 +231,17 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
   Serial.println("               Lupqsa");
   Serial.println("             S.A de C.V");
   Serial.println(" ");
-  Serial.println("Medidor: ");
+  Serial.print("Medidor: ");
   Serial.println("L001");
-  Serial.println("Ticket: ");
+  Serial.print("Ticket: ");
   Serial.println(ticket);
-  Serial.println("Fecha");
+  Serial.print("Fecha");
   Serial.print(date.day(), DEC);
   Serial.print('/');
   Serial.print(date.month(), DEC);
   Serial.print('/');
   Serial.println(date.year(), DEC);
-  Serial.println("Hora: ");
+  Serial.print("Hora: ");
   Serial.print(date.hour(), DEC);
   Serial.print(':');
   
@@ -213,9 +250,9 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
     Serial.print("0");  
   }
   Serial.println(date.minute(), DEC);
-  Serial.println("Carga: ");  
+  Serial.print("Carga: ");  
   Serial.println(carga);
-  Serial.println("Totalizer: ");  
+  Serial.print("Totalizer: ");  
   Serial.println(read_totalizer);
   Serial.println(" ");
   Serial.println("   -----------------------------");
@@ -225,7 +262,7 @@ void data_ticket(DateTime date, float read_totalizer, int ticket, float carga){
 }
 
 
-//LCD Display Function
+// LCD Display Function
 void lcd_display(float carga){
   lcd.setCursor(0, 0);          //Sets cursor at first row
   lcd.print("Total litros:");
@@ -236,22 +273,24 @@ void lcd_display(float carga){
 }
 
 
-//Reset Totalizer function
+// Reset Totalizer function
 void reset(){
-  total_pulses = 0;             //Totalizer reset to zero
-  EepromRTC.writeFloat(7, 0);
-  EepromRTC.writeInt(5, 1);
+    EepromRTC.writeFloat(1, 0.0);                   // Initializes total pulses memory to clean trash in memory
+    EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
+    EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
+    EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
+    EepromRTC.writeFloat(12, 100.0);                // Initializes pulses_per_litre variable at 100.0
 }
 
 
-//RFID function
+// RFID function
 void rfid(){
   // si no puede obtener datos de la tarjeta
   if ( ! mfrc522.PICC_ReadCardSerial())  
       return;   
       
    for (byte i = 0; i < mfrc522.uid.size; i++) {    // loop goes through the UID one byte at a time
-      //Serial.print(mfrc522.uid.uidByte[i], HEX);    // prints the byte of the UID read in hexadecimal
+      //Serial.print(mfrc522.uid.uidByte[i], HEX);  // prints the byte of the UID read in hexadecimal
       LecturaUID[i]=mfrc522.uid.uidByte[i];         // stores the byte of the UID read in an array   
    }
                              
@@ -270,12 +309,26 @@ void rfid(){
 }
 
 
-//comparaUID is used on RFID function
+// comparaUID is used on RFID function
 boolean comparaUID(byte lectura[],byte usuario[])
 {
   for (byte i=0; i < mfrc522.uid.size; i++){      // loop goes through the UID one byte at a time
-    if(lectura[i] != usuario[i])                 // if byte of UID read is different from user
+    if(lectura[i] != usuario[i])                  // if byte of UID read is different from user
       return(false);                            
     }
-  return(true);                               //if the 4 bytes match it returns true
+  return(true);                                   // if the 4 bytes match it returns true
+}
+
+// Calibration function
+void calibration(){
+  pulse = 0;
+  time_now = millis();                            // Delay setups
+  while(millis() - time_now <= period){}          // Equivalent to delay(1000) instruction
+  
+  //Add pulses logic
+  noInterrupts();
+  total_pulses_cal += pulse;        
+  interrupts();
+
+  lcd.clear();
 }
