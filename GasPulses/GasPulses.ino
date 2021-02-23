@@ -12,7 +12,7 @@
 #define buttonPin1 4              // Calibration button
 #define buttonPin2 5              // Print button
 #define switch_cal 6              // Calibration switch between 10 or 20 litres recipient
-#define period 1000               // 1sec loop period
+#define period 100                // 1sec loop period
 
 //Variables definition
 volatile int pulse = 0;           // Variable modified inside the external interrupt
@@ -97,17 +97,6 @@ void setup() {
 ///////////////////////////////////////////////////////////////////////////////////////////////
 void loop() 
 { 
-  //Read the EEPROM and get the latest totalizer value
-  total_pulses = EepromRTC.readFloat(1);           // Read memory pulses from address 1 to 4.
-  
-  //Pulse measuring
-  pulse=0;
-  time_now = millis();                             //Delay setups
-  while(millis() - time_now <= period){}           //Equivalent to delay(1000) instruction
-
-  /*Serial.print("Pulses per second: ");             //Pulses debugger
-  Serial.println(pulse); */
-
   //Catches the rtc value
   DateTime now = rtc.now();                        
 
@@ -118,21 +107,30 @@ void loop()
 
   // SENSIBLE CODE HERE ///////////////////////////////////////////////////////////////////////////////////////////////////////////
   noInterrupts();
+  //Read the EEPROM and get the latest totalizer value
+  total_pulses = EepromRTC.readFloat(1);           // Read memory pulses from address 1 to 4.
+  
+  //Pulse measuring
+  pulse=0;
+  time_now = millis();                             //Delay setups
+  while(millis() - time_now <= period){}           //Equivalent to delay(100) instruction
   
   //Totalizer logic
   total_pulses += pulse;        
+
+  //Write on the EEPROM the current totalizer value
+  EepromRTC.writeFloat(1, total_pulses); 
   
   interrupts();
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  
   //EEPROM read last pulses_per_litre
   pulses_per_litre = EepromRTC.readFloat(12);
   //Serial.println(pulses_per_litre);
   
   //Total pulses to totalizer (litres) conversion
   totalizer = float(total_pulses)/pulses_per_litre; 
-
-  //Write on the EEPROM the current totalizer value
-  EepromRTC.writeFloat(1, total_pulses); 
   
   //Calculate the currente charge 
    prev_pulses = EepromRTC.readFloat(7);                                    //Read previous pulses from address 7 to 10          
@@ -308,9 +306,7 @@ void rfid(){
    mfrc522.PICC_HaltA();     //card communication stops              
 }
 
-
-// comparaUID is used on RFID function
-boolean comparaUID(byte lectura[],byte usuario[])
+boolean comparaUID(byte lectura[],byte usuario[]) // comparaUID is used on RFID function
 {
   for (byte i=0; i < mfrc522.uid.size; i++){      // loop goes through the UID one byte at a time
     if(lectura[i] != usuario[i])                  // if byte of UID read is different from user
@@ -319,14 +315,15 @@ boolean comparaUID(byte lectura[],byte usuario[])
   return(true);                                   // if the 4 bytes match it returns true
 }
 
+
 // Calibration function
 void calibration(){
+//Add pulses logic
+  noInterrupts();
   pulse = 0;
   time_now = millis();                            // Delay setups
   while(millis() - time_now <= period){}          // Equivalent to delay(1000) instruction
-  
-  //Add pulses logic
-  noInterrupts();
+
   total_pulses_cal += pulse;        
   interrupts();
 
