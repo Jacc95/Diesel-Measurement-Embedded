@@ -16,6 +16,7 @@
 
 //Variables definition
 volatile int pulse = 0;           // Variable modified inside the external interrupt
+unsigned int pulse_ant = 0;       // Variable to calculate delta pulses per loop
 unsigned int total_pulses = 0;    // Total pulses saved inside the EEprom as well
 unsigned int prev_pulses = 0;     // Prev pulses saved inside the EEprom as well
 float totalizer = 0.00;           // Converted total pulses (Output in liters)
@@ -68,12 +69,13 @@ void setup() {
   pinMode(buttonPin1, INPUT);                 // Calibration signal
   pinMode(buttonPin2, INPUT);                 // Printer signal
   attachInterrupt(0, count_pulse, RISING);    // 0 stands for PIN2 of the Arduino board
-
+  pulse = 0;
+  
   //LCD Setup
   lcd.init();                                 // Initializes LCD object
   lcd.setBacklight(1);                        // Sets light to max
   lcd.clear();                                // Clears LCD screen
-
+  
   //RFID Setup
   SPI.begin();                                // Initialize SPI bus
   mfrc522.PCD_Init();                         // Initialize reader module
@@ -101,7 +103,7 @@ void loop()
   total_pulses = EepromRTC.readFloat(1);           // Read memory pulses from address 1 to 4.
   
   //Pulse measuring
-  pulse=0;
+  pulse_ant = pulse;                               //Update pulse_ant variable to obtain delta
   time_now = millis();                             //Delay setups
   while(millis() - time_now <= period){}           //Equivalent to delay(1000) instruction
 
@@ -120,7 +122,7 @@ void loop()
   noInterrupts();
   
   //Totalizer logic
-  total_pulses += pulse;        
+  total_pulses += (pulse - pulse_ant);        
   
   interrupts();
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,7 +161,7 @@ void loop()
     lcd.print("MODO Calibrar");
   
     lcd.setCursor(0, 1);          //Sets cursor at second row
-    lcd.print("esperando...");
+    lcd.print(total_pulses_cal);
                                                                                  // DIsplay Modo Calibrando...
     calibration();                                                               // 1 sec delay is included here
     if(digitalRead(buttonPin1) == HIGH){                                         // Press the button again to finish calib mode
