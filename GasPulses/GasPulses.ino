@@ -33,12 +33,6 @@ bool calibration_flag = false;    // Calibration condition flag
 //Printing variables
 int ticket;                       // Ticket number
 
-//Debounce variables [UNUSED]
-/*
-bool buttonState = LOW;           
-int prevState = LOW;        
-long lastDebounce = 0;            // The last time the output pin was toggled
-long debounceDelay = 50;          // The debounce time; increase if the output flickers*/
 
 //Object rtc
 RTC_DS1307 rtc;
@@ -68,7 +62,7 @@ void setup() {
   pinMode(inpPin, INPUT);                     // Input signal PIN2
   pinMode(buttonPin1, INPUT);                 // Calibration signal
   pinMode(buttonPin2, INPUT);                 // Printer signal
-  attachInterrupt(0, count_pulse, RISING);    // 0 stands for PIN2 of the Arduino board
+  attachInterrupt(digitalPinToInterrupt(3), count_pulse, RISING);    // 0 stands for PIN2 of the Arduino board
   pulse = 0;
   
   //LCD Setup
@@ -100,7 +94,7 @@ void setup() {
 void loop() 
 { 
   //Read the EEPROM and get the latest totalizer value
-  total_pulses = EepromRTC.readFloat(1);           // Read memory pulses from address 1 to 4.
+  total_pulses = EepromRTC.readInt(1);           // Read memory pulses from address 1 to 4.
   
   //Pulse measuring
   pulse_ant = pulse;                               //Update pulse_ant variable to obtain delta
@@ -131,14 +125,14 @@ void loop()
   //Serial.println(pulses_per_litre);
   
   //Total pulses to totalizer (litres) conversion
-  totalizer = float(total_pulses)/pulses_per_litre; 
+  totalizer = total_pulses/pulses_per_litre; 
 
   //Write on the EEPROM the current totalizer value
-  EepromRTC.writeFloat(1, total_pulses); 
+  EepromRTC.writeInt(1, total_pulses); 
   
   //Calculate the currente charge 
-   prev_pulses = EepromRTC.readFloat(7);                                    //Read previous pulses from address 7 to 10          
-   prev_totalizer = float(prev_pulses)/pulses_per_litre;
+   prev_pulses = EepromRTC.readInt(7);                                    //Read previous pulses from address 7 to 10          
+   prev_totalizer = prev_pulses/pulses_per_litre;
    carga = totalizer - prev_totalizer;
 
   /////////////////////////////////////////////////////////////////////////////////////////////
@@ -148,7 +142,7 @@ void loop()
   if(switch_cal == HIGH){
     jug_size = 20;                                                               // 10 Liters jug. Vcc
   } else{
-    jug_size = 10;                                                               // 20 Liters jug. GND
+    jug_size = 20;                                                               // 20 Liters jug. GND
   }
   
   //Starts the calibration procedure when the button is pressed
@@ -188,7 +182,7 @@ void loop()
     ticket++;                                       // Increment ticket number
     
     prev_pulses = total_pulses;
-    EepromRTC.writeFloat(7, prev_pulses);           // Writes prev pulses into EEPROM
+    EepromRTC.writeInt(7, prev_pulses);           // Writes prev pulses into EEPROM
     
   }
   EepromRTC.writeInt(5, ticket);                    // Writes next ticket number into EEPROM               
@@ -208,23 +202,6 @@ void count_pulse()
 {
   pulse++; 
 } 
-
-
-//Debouncing function [UNUSED]
-/*
-bool debounce(){
-  buttonState = digitalRead(buttonPin1);
-  
-  if(buttonState != prevState){
-    lastDebounce = millis();
-  
-    if(millis() - lastDebounce > debounceDelay){
-      if(buttonState == HIGH){
-        return true;
-      }
-    }
-  }
-}*/
 
 
 //Print ticket format
@@ -277,9 +254,9 @@ void lcd_display(float carga){
 
 // Reset Totalizer function
 void reset(){
-    EepromRTC.writeFloat(1, 0.0);                   // Initializes total pulses memory to clean trash in memory
+    EepromRTC.writeInt(1, 0.0);                     // Initializes total pulses memory to clean trash in memory
     EepromRTC.writeInt(5, 1);                       // Initializes ticket number to 1 and clean trash in memory
-    EepromRTC.writeFloat(7, 0.0);                   // Initializes prev pulses memory to clean trash in memory 
+    EepromRTC.writeInt(7, 0.0);                     // Initializes prev pulses memory to clean trash in memory 
     EepromRTC.write(11, 0);                         // Tells the Arduino variables can only be initialized through INITIALIZE.INO
     EepromRTC.writeFloat(12, 100.0);                // Initializes pulses_per_litre variable at 100.0
 }
