@@ -223,7 +223,7 @@ void loop ()
   total_freq += frecuencia;
   dt = millis() - t0;                                                     // Calculamos la variación de tiempo
   t0 = millis();
-  volumen = volumen + k_factor * (caudal_L_m/60) * (dt/1000);                        // Volumen(L) = caudal(L/s)*tiempo(s)
+  volumen = volumen + k_factor * (caudal_L_m/60) * (dt/1000);             // Volumen(L) = caudal(L/s)*tiempo(s)
   carga = volumen - volumen_ant;
 
   //----- Enviamos por el puerto serie -------------------------------------------------------------------------------------------------------------
@@ -237,7 +237,7 @@ void loop ()
   interrupts();
   lcd.clear();
   if(calibration_flag == false){
-    lcd_display(total_freq, carga);
+    lcd_display(k_factor, carga);
   }
   
   //---- Calibration --------------------------------------------------------------------------------------------------------------------------------
