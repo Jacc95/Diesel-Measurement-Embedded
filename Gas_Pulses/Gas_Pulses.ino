@@ -152,6 +152,9 @@ float calibration(float factor_conversion){
   t0_cal = millis();
   vol_cal = vol_cal + (caudal_cal/60) * (dt/1000);                      // Volumen(L) = caudal(L/s)*tiempo(s)
   interrupts();
+  lcd.setCursor(0, 1);                                                  // Sets cursor at second row
+  lcd.print(vol_cal);
+  lcd.print(" L");
   
   return vol_cal;
 }
@@ -160,10 +163,6 @@ float k_fact(float vol_cal){
   float den = (20 - vol_cal) / 20;
   float k_factor = 1 / (1 - den);
   
-  lcd.setCursor(0, 1);                                                  // Sets cursor at second row
-  lcd.print(vol_cal);
-  lcd.print(" L");
-    
   return k_factor;
 }
 
