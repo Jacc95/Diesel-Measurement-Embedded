@@ -151,6 +151,7 @@ float calibration(float factor_conversion){
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
   t0_cal = millis();
   vol_cal = vol_cal + (caudal_cal/60) * (dt/1000);                      // Volumen(L) = caudal(L/s)*tiempo(s)
+  interrupts();
   
   return vol_cal;
 }
@@ -241,12 +242,12 @@ void loop ()
   }
   
   //---- Calibration --------------------------------------------------------------------------------------------------------------------------------
-  if(digitalRead(CalButton) == LOW){                                           // Press the button to enter calibration mode
+  if(digitalRead(CalButton) == LOW){                                          // Press the button to enter calibration mode
       if(calibration_flag == false){
         calibration_flag = true;
         vol_cal = 0;
-        lcd.setCursor(0, 0);                                                   // Sets cursor at first row
-        lcd.print("MODO Calibrar");                                            // Display Modo Calibrando...
+        lcd.setCursor(0, 0);                                                  // Sets cursor at first row
+        lcd.print("MODO Calibrar");                                           // Display Modo Calibrando...
       }
     while(digitalRead(CalButton) == LOW);
   }
@@ -259,6 +260,7 @@ void loop ()
         k_factor = k_fact(vol_cal);                                           // Get new k_factor
         EepromRTC.writeFloat(12, k_factor);                                   // Write new k_factor constant in memory position 12
       }
+      while(digitalRead(CalButton) == LOW);
     }
   }
   
