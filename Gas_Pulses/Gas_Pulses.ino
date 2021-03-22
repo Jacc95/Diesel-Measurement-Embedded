@@ -150,8 +150,11 @@ float calibration(float factor_conversion){
   float caudal_cal = freq_cal/factor_conversion;                        // Calculamos el caudal en L/m
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
   t0_cal = millis();
-  vol_cal = vol_cal + (caudal_cal/60) * (dt/1000);                      // Volumen(L) = caudal(L/s)*tiempo(s)
+  vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/1000);                  // Volumen(L) = caudal(L/s)*tiempo(s)
   interrupts();
+  lcd.clear();
+  lcd.setCursor(0, 0);                                                  // Sets cursor at first row
+  lcd.print("MODO Calibrar");                                           // Display Modo Calibrando...
   lcd.setCursor(0, 1);                                                  // Sets cursor at second row
   lcd.print(vol_cal);
   lcd.print(" L");
@@ -245,8 +248,6 @@ void loop ()
       if(calibration_flag == false){
         calibration_flag = true;
         vol_cal = 0;
-        lcd.setCursor(0, 0);                                                  // Sets cursor at first row
-        lcd.print("MODO Calibrar");                                           // Display Modo Calibrando...
       }
     while(digitalRead(CalButton) == LOW);
   }
