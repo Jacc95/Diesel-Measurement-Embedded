@@ -26,6 +26,7 @@ int ticket = 1;                                             // Printing variable
 float k_factor = 1.00;                                      // Calibration factor based on error %
 bool calibration_flag = false;                              // Calibration condition flag
 float vol_cal = 0;                                          // Calibration accumulated volume
+float t0_cal = 0;
 
 //Objects to be used
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);     // Change to (0x27,16,2) for 16x2 LCD
@@ -144,8 +145,8 @@ boolean comparaUID(byte lectura[],byte usuario[])                         // com
 }
 
 //---- Calibration --------------------------------------------------------------------------------------------------------------------------------------------------------
-float calibration(float factor_conversion){
-  float t0_cal, vol_cal;                                                // Definimos variables locales
+float calibration(float factor_conversion, float t0_cal){
+  float vol_cal;                                                        // Definimos variables locales
   float freq_cal = ObtenerFrecuecia();                                  // Obtenemos la frecuencia de los pulsos en Hz
   float caudal_cal = freq_cal/factor_conversion;                        // Calculamos el caudal en L/m
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
@@ -253,7 +254,7 @@ void loop ()
   }
   
   while(calibration_flag == true){                                            // Calibration procedure                                                                                
-    vol_cal = calibration(factor_conversion);                                 // 1 sec delay is included here
+    vol_cal = calibration(factor_conversion, t0_cal);                         // 1 sec delay is included here
     if(digitalRead(CalButton) == LOW){                                        // Press the button again to finish calib mode
       calibration_flag = false;
       if(vol_cal > 6.00){                                                     // Measured volume should be higher than 6 to make sure there was no mistake
