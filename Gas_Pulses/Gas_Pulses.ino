@@ -6,14 +6,14 @@
 #include <SPI.h>                                            // Library for the RFID
 #include <MFRC522.h>                                        // Library for the RFID
 
-//Assign PINs *****************************************************************************************************************************************************************************
+//Assign PINs ***********************************************************
 #define PinSensor 3                                         // Sensor conectado en el pin 3
 #define CalButton 4                                         // Calibration button connected to pin 4
 #define PrintButton 5                                       // Printer button connected to pin 5
 #define RST_PIN  9                                          // Constant to reference reset pin
 #define SS_PIN  10                                          // Constant to reference pin of slave select 
 
-//Global variables ************************************************************************************************************************************************************************
+//Global variables ********************************************************
 volatile int NumPulsos;                                     // Variable para la cantidad de pulsos recibidos
 float factor_conversion = 1.42;                             // Para convertir de frecuencia a caudal
 float volumen = 0;                                          // 
@@ -27,6 +27,8 @@ float k_factor = 1.00;                                      // Calibration facto
 bool calibration_flag = false;                              // Calibration condition flag
 float vol_cal = 0;                                          // Calibration accumulated volume
 float t0_cal = 0;
+int jug_fill = 20;
+String jug_fill_str;
 
 //Objects to be used
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);     // Change to (0x27,16,2) for 16x2 LCD
@@ -145,29 +147,30 @@ boolean comparaUID(byte lectura[],byte usuario[])                         // com
 }
 
 //---- Calibration --------------------------------------------------------------------------------------------------------------------------------------------------------
-float calibration(float factor_conversion, float t0_cal){
-  float vol_cal;                                                        // Definimos variables locales
+float calibration(float factor_conversion, float t0_cal, float vol_cal){
   float freq_cal = ObtenerFrecuecia();                                  // Obtenemos la frecuencia de los pulsos en Hz
   float caudal_cal = freq_cal/factor_conversion;                        // Calculamos el caudal en L/m
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
-  t0_cal = millis();
-  vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/1000);                  // Volumen(L) = caudal(L/s)*tiempo(s)
-  interrupts();
-  lcd.clear();
-  lcd.setCursor(0, 0);                                                  // Sets cursor at first row
-  lcd.print("MODO Calibrar");                                           // Display Modo Calibrando...
-  lcd.setCursor(0, 1);                                                  // Sets cursor at second row
-  lcd.print(vol_cal);
-  lcd.print(" L");
   
+  vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/1000);                  // Volumen(L) = caudal(L/s)*tiempo(s)
   return vol_cal;
 }
 
-float k_fact(float vol_cal){
-  float den = (20 - vol_cal) / 20;
+float k_fact(float vol_cal, int jug_fill){
+  float den = (jug_fill - vol_cal*100) / jug_fill;
   float k_factor = 1 / (1 - den);
   
   return k_factor;
+}
+
+void print_cal(){
+  interrupts();
+  lcd.clear();
+  lcd.setCursor(0, 0);                                                  // Sets cursor at first row
+  lcd.print("MODO CALIBRACION");                                           // Display Modo Calibrando...
+  lcd.setCursor(0, 1);                                                  // Sets cursor at second row
+  lcd.print(vol_cal);
+  lcd.print(" L");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -203,7 +206,7 @@ void setup()
   //Code that runs only when EEprom & RTC have not been set before
   //To INITIALIZE the variables RUN INITIALIZE.ino first
   if(EepromRTC.read(11)){
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));                       // Set time in the rtc when uploading code
+    rtc.adjust(DateTime(F(_DATE), F(TIME_)));                       // Set time in the rtc when uploading code
     reset();                                                              // Initializes the variables to be used
   }
 
@@ -219,9 +222,6 @@ void setup()
 
 void loop ()    
 {
-  if (Serial.available()) {
-    if(Serial.read() == 'r') volumen = 0;                                 // Restablecemos el volumen si recibimos 'r'
-  }
   float frecuencia = ObtenerFrecuecia();                                  // Obtenemos la frecuencia de los pulsos en Hz
   float caudal_L_m = frecuencia/factor_conversion;                        // Calculamos el caudal en L/m
   total_freq += frecuencia;
@@ -249,16 +249,24 @@ void loop ()
       if(calibration_flag == false){
         calibration_flag = true;
         vol_cal = 0;
+        jug_fill_str = "2000";
       }
     while(digitalRead(CalButton) == LOW);
   }
   
   while(calibration_flag == true){                                            // Calibration procedure                                                                                
-    vol_cal = calibration(factor_conversion, t0_cal);                         // 1 sec delay is included here
+    vol_cal = calibration(factor_conversion, t0_cal,vol_cal);                         // 1 sec delay is included here
+    t0_cal = millis();
+    print_cal();
+    
+    if (Serial.available()) {
+      jug_fill_str = Serial.readString();                                 // Restablecemos el volumen si recibimos 'r'
+      jug_fill = jug_fill_str.toInt();
+    }
     if(digitalRead(CalButton) == LOW){                                        // Press the button again to finish calib mode
       calibration_flag = false;
       if(vol_cal > 6.00){                                                     // Measured volume should be higher than 6 to make sure there was no mistake
-        k_factor = k_fact(vol_cal);                                           // Get new k_factor
+        k_factor = k_fact(vol_cal, jug_fill);                                           // Get new k_factor
         EepromRTC.writeFloat(12, k_factor);                                   // Write new k_factor constant in memory position 12
       }
       while(digitalRead(CalButton) == LOW);
