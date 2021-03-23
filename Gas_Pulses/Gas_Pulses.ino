@@ -256,7 +256,7 @@ void loop ()
     vol_cal = calibration(factor_conversion);                                 // 1 sec delay is included here
     if(digitalRead(CalButton) == LOW){                                        // Press the button again to finish calib mode
       calibration_flag = false;
-      if(vol_cal > 6){                                                        // Measured volume should be higher than 6 to make sure there was no mistake
+      if(vol_cal > 6.00){                                                     // Measured volume should be higher than 6 to make sure there was no mistake
         k_factor = k_fact(vol_cal);                                           // Get new k_factor
         EepromRTC.writeFloat(12, k_factor);                                   // Write new k_factor constant in memory position 12
       }
