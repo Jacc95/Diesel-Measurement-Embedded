@@ -6,16 +6,17 @@
 #include <SPI.h>                                            // Library for the RFID
 #include <MFRC522.h>                                        // Library for the RFID
 
-//Assign PINs ***********************************************************
+//Assign PINs *******
 #define PinSensor 3                                         // Sensor conectado en el pin 3
 #define CalButton 4                                         // Calibration button connected to pin 4
 #define PrintButton 5                                       // Printer button connected to pin 5
 #define RST_PIN  9                                          // Constant to reference reset pin
 #define SS_PIN  10                                          // Constant to reference pin of slave select 
 
-//Global variables ********************************************************
+//Global variables ********
 volatile int NumPulsos;                                     // Variable para la cantidad de pulsos recibidos
-float factor_conversion = 1.42;                             // Para convertir de frecuencia a caudal
+float factor_conversion = 1.437;                            // Para convertir de frecuencia a caudal
+float factor_conversion_cal = 1.454;                        // Factor para calibracion
 float volumen = 0;                                          // 
 float volumen_ant = 0;                                      //
 float carga;                                                // 
@@ -27,7 +28,7 @@ float k_factor = 1.00;                                      // Calibration facto
 bool calibration_flag = false;                              // Calibration condition flag
 float vol_cal = 0;                                          // Calibration accumulated volume
 float t0_cal = 0;
-int jug_fill = 20;
+int jug_fill = 2000;
 String jug_fill_str;
 
 //Objects to be used
@@ -151,7 +152,7 @@ float calibration(float factor_conversion, float t0_cal, float vol_cal){
   float freq_cal = ObtenerFrecuecia();                                  // Obtenemos la frecuencia de los pulsos en Hz
   float caudal_cal = freq_cal/factor_conversion;                        // Calculamos el caudal en L/m
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
-  
+
   vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/1000);                  // Volumen(L) = caudal(L/s)*tiempo(s)
   return vol_cal;
 }
@@ -163,11 +164,12 @@ float k_fact(float vol_cal, int jug_fill){
   return k_factor;
 }
 
-void print_cal(){
+void print_cal(float vol_cal, int jug_fill){
   interrupts();
   lcd.clear();
   lcd.setCursor(0, 0);                                                  // Sets cursor at first row
-  lcd.print("MODO CALIBRACION");                                           // Display Modo Calibrando...
+  lcd.print(jug_fill);                                                  // Display Modo Calibrando...
+  lcd.print(" Jug");
   lcd.setCursor(0, 1);                                                  // Sets cursor at second row
   lcd.print(vol_cal);
   lcd.print(" L");
@@ -206,14 +208,15 @@ void setup()
   //Code that runs only when EEprom & RTC have not been set before
   //To INITIALIZE the variables RUN INITIALIZE.ino first
   if(EepromRTC.read(11)){
-    rtc.adjust(DateTime(F(_DATE), F(TIME_)));                       // Set time in the rtc when uploading code
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));                       // Set time in the rtc when uploading code
     reset();                                                              // Initializes the variables to be used
   }
 
   //Read the EEPROM and get the latest values
   volumen = EepromRTC.readFloat(1);                                       // Read totalizer volume from address 1 to 4.
   volumen_ant = EepromRTC.readFloat(7);                                   // Read previous totalizer volume from address 7 to 10.
-  k_factor = EepromRTC.readFloat(12);                                     // Read the latest calibration factor
+  //k_factor = EepromRTC.readFloat(12);                                     // Read the latest calibration factor
+  k_factor = 1;
 } 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -255,9 +258,9 @@ void loop ()
   }
   
   while(calibration_flag == true){                                            // Calibration procedure                                                                                
-    vol_cal = calibration(factor_conversion, t0_cal,vol_cal);                         // 1 sec delay is included here
+    vol_cal = calibration(factor_conversion_cal, t0_cal,vol_cal);                         // 1 sec delay is included here
     t0_cal = millis();
-    print_cal();
+    print_cal(vol_cal, jug_fill);
     
     if (Serial.available()) {
       jug_fill_str = Serial.readString();                                 // Restablecemos el volumen si recibimos 'r'
