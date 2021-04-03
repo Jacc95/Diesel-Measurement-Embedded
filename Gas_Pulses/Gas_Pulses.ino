@@ -15,8 +15,8 @@
 
 //Global variables ********
 volatile int NumPulsos;                                     // Variable para la cantidad de pulsos recibidos
-float factor_conversion = 1.437;                            // Para convertir de frecuencia a caudal
-float factor_conversion_cal = 1.454;                        // Factor para calibracion
+float factor_conversion = 1.400;                            // Para convertir de frecuencia a caudal
+float factor_conversion_cal = 1.503;                        // Factor para calibracion
 float volumen = 0;                                          // 
 float volumen_ant = 0;                                      //
 float carga;                                                // 
@@ -215,7 +215,7 @@ void setup()
   //Read the EEPROM and get the latest values
   volumen = EepromRTC.readFloat(1);                                       // Read totalizer volume from address 1 to 4.
   volumen_ant = EepromRTC.readFloat(7);                                   // Read previous totalizer volume from address 7 to 10.
-  //k_factor = EepromRTC.readFloat(12);                                     // Read the latest calibration factor
+  //k_factor = EepromRTC.readFloat(12);                                   // Read the latest calibration factor
   k_factor = 1;
 } 
 
@@ -248,7 +248,7 @@ void loop ()
   }
   
   //---- Calibration --------------------------------------------------------------------------------------------------------------------------------
-  if(digitalRead(CalButton) == LOW){                                          // Press the button to enter calibration mode
+  if(digitalRead(CalButton) == LOW){                                         // Press the button to enter calibration mode
       if(calibration_flag == false){
         calibration_flag = true;
         vol_cal = 0;
@@ -257,20 +257,20 @@ void loop ()
     while(digitalRead(CalButton) == LOW);
   }
   
-  while(calibration_flag == true){                                            // Calibration procedure                                                                                
-    vol_cal = calibration(factor_conversion_cal, t0_cal,vol_cal);                         // 1 sec delay is included here
+  while(calibration_flag == true){                                           // Calibration procedure                                                                                
+    vol_cal = calibration(factor_conversion_cal, t0_cal,vol_cal);            // 1 sec delay is included here
     t0_cal = millis();
     print_cal(vol_cal, jug_fill);
     
     if (Serial.available()) {
-      jug_fill_str = Serial.readString();                                 // Restablecemos el volumen si recibimos 'r'
+      jug_fill_str = Serial.readString();                                    // Restablecemos el volumen si recibimos 'r'
       jug_fill = jug_fill_str.toInt();
     }
-    if(digitalRead(CalButton) == LOW){                                        // Press the button again to finish calib mode
+    if(digitalRead(CalButton) == LOW){                                       // Press the button again to finish calib mode
       calibration_flag = false;
-      if(vol_cal > 6.00){                                                     // Measured volume should be higher than 6 to make sure there was no mistake
-        k_factor = k_fact(vol_cal, jug_fill);                                           // Get new k_factor
-        EepromRTC.writeFloat(12, k_factor);                                   // Write new k_factor constant in memory position 12
+      if(vol_cal > 6.00){                                                    // Measured volume should be higher than 6 to make sure there was no mistake
+        k_factor = k_fact(vol_cal, jug_fill);                                // Get new k_factor
+        EepromRTC.writeFloat(12, k_factor);                                  // Write new k_factor constant in memory position 12
       }
       while(digitalRead(CalButton) == LOW);
     }
