@@ -5,15 +5,22 @@
 #include "Adafruit_Thermal.h"                               // Library for Thermal Printer
 #include <SPI.h>                                            // Library for the RFID
 #include <MFRC522.h>                                        // Library for the RFID
+#include <Keypad.h>                                         // Library for the Keypad
 
-//Assign PINs *******
+//Variables for keypad 4x4 ***********
+#define ROW_NUM 4
+#define COLUMN_NUM 4
+
+//Assign PINs ************
 #define PinSensor 3                                         // Sensor conectado en el pin 3
-#define CalButton 4                                         // Calibration button connected to pin 4
-#define PrintButton 5                                       // Printer button connected to pin 5
+//#define CalButton 4                                         // Calibration button connected to pin 4
+//#define PrintButton 5                                       // Printer button connected to pin 5
 #define RST_PIN  9                                          // Constant to reference reset pin
 #define SS_PIN  10                                          // Constant to reference pin of slave select 
+byte pin_rows[ROW_NUM] = {A3, A2, A1, A0};                  // Connect to the row pinouts of the keypad
+byte pin_column[COLUMN_NUM] = {7, 6, 5, 4};                 // Connect to the column pinouts of the keypad
 
-//Global variables ********
+//Global variables ************
 volatile int NumPulsos;                                     // Variable para la cantidad de pulsos recibidos
 float factor_conversion = 1.400;                            // Para convertir de frecuencia a caudal
 float factor_conversion_cal = 1.503;                        // Factor para calibracion
@@ -27,20 +34,32 @@ int ticket = 1;                                             // Printing variable
 float k_factor = 1.00;                                      // Calibration factor based on error %
 bool calibration_flag = false;                              // Calibration condition flag
 float vol_cal = 0;                                          // Calibration accumulated volume
-float t0_cal = 0;
-int jug_fill = 2000;
-String jug_fill_str;
+float t0_cal = 0;                                           // Calibration time of measurement
+//int jug_fill = 2000;
+//String jug_fill_str;
+String jug = "";                                            // Keypad variable to obtain jug
+int jug_int = 2000;                                         // Integer version of jug variable
+char jug_array[4] = {'2', '0', '0', '0'};                   // Jug array to show on display & change digit by digit
+int jug_array_pos = 0;                                      // Jug array position variable
+
+//Keypad mapping
+char keys[ROW_NUM][COLUMN_NUM] = {
+  {'1','2','3', 'A'},
+  {'4','5','6', 'B'},
+  {'7','8','9', 'C'},
+  {'*','0','#', 'D'}};
 
 //Objects to be used
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);     // Change to (0x27,16,2) for 16x2 LCD
 RTC_DS3231 rtc;                                             // Object RTC        
 AT24C32 EepromRTC;                                          // Object EEpromRTC(Memory)
 MFRC522 mfrc522(SS_PIN, RST_PIN);                           // Create mfrc522 object by sending slave select and reset pins 
+Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
 
 //Cards to be read by RFID
 byte LecturaUID[4];                                         // Create array to store the UID read
-byte Usuario1[4]= {0xD9, 0x3A, 0x08, 0xBA} ;                // Card  UID needed to reset
-byte Usuario2[4]= {0x29, 0xB4, 0xA7, 0xB2} ;                // Card2 UID needed to reset
+byte Usuario1[4]= {0x29, 0xB4, 0xA7, 0xB2} ;                // UID TO REST 
+byte Usuario2[4]= {0x49, 0x9F, 0x11, 0xC2} ;                // UID TO RESET
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTIONS //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +77,11 @@ int ObtenerFrecuecia()
   int frecuencia;
   interrupts();                                             // Habilitamos las interrupciones
   NumPulsos = 0;                                            // Ponemos a 0 el número de pulsos
-  delay(1000);                                              // Muestra de 1 segundo
+  if(calibration_flag == true){
+    delay(250);                                              // Muestra de 1 segundo
+  } else {
+    delay(1000);
+  }
   frecuencia = NumPulsos;                                   // Hz(pulsos por segundo)
   noInterrupts();                                           // Deshabilitamos  las interrupciones
   return frecuencia;           
@@ -108,7 +131,7 @@ void data_ticket(DateTime date, float volumen, int ticket, float carga){
   }
   Serial.println(date.minute(), DEC);
   Serial.print("Carga: ");  
-  //Serial.println(carga);
+  Serial.println(carga);
   Serial.print("Totalizer: ");  
   Serial.println(volumen);
   Serial.println(" ");
@@ -127,10 +150,14 @@ void rfid(){
       LecturaUID[i]=mfrc522.uid.uidByte[i];                               // stores the byte of the UID read in an array   
   }
   if(comparaUID(LecturaUID, Usuario1)){   
-      reset(); 
+      reset();
+      volumen = 0;  
+      volumen_ant = 0;
       lcd.clear();                                                        // Clears LCD screen
   } else if(comparaUID(LecturaUID, Usuario2)){
       reset(); 
+      volumen = 0;
+      volumen_ant = 0; 
       lcd.clear();
    }
    else                                                                   // si retorna falso
@@ -153,24 +180,33 @@ float calibration(float factor_conversion, float t0_cal, float vol_cal){
   float caudal_cal = freq_cal/factor_conversion;                        // Calculamos el caudal en L/m
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
 
-  vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/1000);                  // Volumen(L) = caudal(L/s)*tiempo(s)
+  vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/250);                  // Volumen(L) = caudal(L/s)*tiempo(s)
   return vol_cal;
 }
 
-float k_fact(float vol_cal, int jug_fill){
-  float den = (jug_fill - vol_cal*100) / jug_fill;
+float k_fact(float vol_cal, int jug_int){
+  float den = (jug_int - vol_cal*100) / jug_int;
   float k_factor = 1 / (1 - den);
   
   return k_factor;
 }
 
-void print_cal(float vol_cal, int jug_fill){
+void display_cal(float vol_cal, char Arreglo[]){
   interrupts();
   lcd.clear();
-  lcd.setCursor(0, 0);                                                  // Sets cursor at first row
-  lcd.print(jug_fill);                                                  // Display Modo Calibrando...
-  lcd.print(" Jug");
-  lcd.setCursor(0, 1);                                                  // Sets cursor at second row
+  
+  lcd.setCursor(0, 0);                                                  // Sets cursor at first row & shows 1st digit
+  lcd.print(Arreglo[0]); 
+  lcd.setCursor(1, 0);                                                  // Sets cursor at first row & shows 2nd digit
+  lcd.print(Arreglo[1]); 
+  lcd.setCursor(2, 0);                                                  // Sets cursor at first row & displays decimal point
+  lcd.print('.'); 
+  lcd.setCursor(3, 0);                                                  // Sets cursor at first row & shows 3rd digit
+  lcd.print(Arreglo[2]); 
+  lcd.setCursor(4, 0);                                                  // Sets cursor at first row & shows 4th digit
+  lcd.print(Arreglo[3]); 
+  
+  lcd.setCursor(0, 1);                                                  // Sets cursor at second row & show current liters passed
   lcd.print(vol_cal);
   lcd.print(" L");
 }
@@ -183,8 +219,8 @@ void setup()
 { 
   Serial.begin(9600);                                                     // Starts Serial comm at 9600 baud rate
   pinMode(PinSensor, INPUT);                                              // Defines pin 3 as input
-  pinMode(CalButton, INPUT_PULLUP);                                       // Defines pin 4 as input with default state of TRUE
-  pinMode(PrintButton, INPUT_PULLUP);                                     // Defines pin 5 as input with default state of TRUE
+  //pinMode(CalButton, INPUT_PULLUP);                                       // Defines pin 4 as input with default state of TRUE
+  //pinMode(PrintButton, INPUT_PULLUP);                                     // Defines pin 5 as input with default state of TRUE
   attachInterrupt(digitalPinToInterrupt(PinSensor),ContarPulsos,RISING);  // (Interrupción 0(Pin2),función,Flanco de subida)
   Serial.println ("Envie 'r' para restablecer el volumen a 0 Litros");    // 
   t0 = millis();                                                          //   
@@ -192,7 +228,7 @@ void setup()
 
   //LCD Setup
   lcd.init();                                                             // Initializes LCD object
-  lcd.setBacklight(1);                                                    // Sets light to max
+  lcd.setBacklight(125);                                                  // Sets light to max
   lcd.clear();                                                            // Clears LCD screen
 
   //RFID Setup
@@ -246,39 +282,55 @@ void loop ()
   if(calibration_flag == false){
     lcd_display(k_factor, carga);
   }
+  //---- Keypad Selection ---------------------------------------------------------------------------------------------------------------------------
+  char key = keypad.getKey();                                                // Cleans the mode variable if no input.
   
   //---- Calibration --------------------------------------------------------------------------------------------------------------------------------
-  if(digitalRead(CalButton) == LOW){                                         // Press the button to enter calibration mode
+  if(key == 'C'){                                                            // Press the button to enter calibration mode
       if(calibration_flag == false){
         calibration_flag = true;
         vol_cal = 0;
-        jug_fill_str = "2000";
+        //jug_fill_str = "2000";
       }
-    while(digitalRead(CalButton) == LOW);
   }
   
   while(calibration_flag == true){                                           // Calibration procedure                                                                                
     vol_cal = calibration(factor_conversion_cal, t0_cal,vol_cal);            // 1 sec delay is included here
     t0_cal = millis();
-    print_cal(vol_cal, jug_fill);
+    display_cal(vol_cal, jug_array);
     
-    if (Serial.available()) {
+    /*if (Serial.available()) {
       jug_fill_str = Serial.readString();                                    // Restablecemos el volumen si recibimos 'r'
       jug_fill = jug_fill_str.toInt();
+    }*/
+    
+    key = keypad.getKey();                                                   // Gets new values for jug or exits calibration mode
+    if(key == '#' && jug_array_pos < 3){
+      jug_array_pos++;
+    } else if(key == '*' && jug_array_pos > 0){
+      jug_array_pos--;
+    } else if(key=='1' || key=='2' || key=='3' || key=='4' || key=='5' || key=='6' || key=='7' || key=='8' || key=='9' || key=='0'){
+      jug_array[jug_array_pos] = key;
     }
-    if(digitalRead(CalButton) == LOW){                                       // Press the button again to finish calib mode
+
+    jug = "";
+    for(int i=0; i<4; i++){
+      jug.concat(jug_array[i]);
+    }
+    jug_int = jug.toInt();
+    
+    if(key == 'C'){                                                          // Press the button again to finish calib mode
       calibration_flag = false;
       if(vol_cal > 6.00){                                                    // Measured volume should be higher than 6 to make sure there was no mistake
-        k_factor = k_fact(vol_cal, jug_fill);                                // Get new k_factor
+        k_factor = k_fact(vol_cal, jug_int);                                 // Get new k_factor
         EepromRTC.writeFloat(12, k_factor);                                  // Write new k_factor constant in memory position 12
       }
-      while(digitalRead(CalButton) == LOW);
     }
   }
   
   //---- Printing -----------------------------------------------------------------------------------------------------------------------------------
   DateTime now = rtc.now();                                                 // Gets current Date-Time
-  if(digitalRead(PrintButton) == LOW){
+  if(key == 'B'){
     //Gets the necessary variables for the ticket
     ticket = EepromRTC.readInt(5);                                          // Read memory pulses from address 5 to 6.
     
@@ -286,7 +338,7 @@ void loop ()
     volumen_ant = volumen;
     EepromRTC.writeInt(5, ++ticket);                                        // Writes next ticket number into EEPROM
     EepromRTC.writeFloat(7, volumen_ant);
-    }
+  }
     
   //------ Updates EEPROM Values --------------------------------------------------------------------------------------------------------------------
   EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.
