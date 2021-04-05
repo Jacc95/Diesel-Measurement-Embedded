@@ -7,11 +7,11 @@
 #include <MFRC522.h>                                        // Library for the RFID
 #include <Keypad.h>                                         // Library for the Keypad
 
-//Variables for keypad 4x4 ***********
+//Variables for keypad 4x4 *************************
 #define ROW_NUM 4
 #define COLUMN_NUM 4
 
-//Assign PINs ************
+//Assign PINs **************************************
 #define PinSensor 3                                         // Sensor conectado en el pin 3
 //#define CalButton 4                                         // Calibration button connected to pin 4
 //#define PrintButton 5                                       // Printer button connected to pin 5
@@ -20,7 +20,7 @@
 byte pin_rows[ROW_NUM] = {A3, A2, A1, A0};                  // Connect to the row pinouts of the keypad
 byte pin_column[COLUMN_NUM] = {7, 6, 5, 4};                 // Connect to the column pinouts of the keypad
 
-//Global variables ************
+//Global variables *********************************
 volatile int NumPulsos;                                     // Variable para la cantidad de pulsos recibidos
 float factor_conversion = 1.400;                            // Para convertir de frecuencia a caudal
 float factor_conversion_cal = 1.503;                        // Factor para calibracion
@@ -42,21 +42,21 @@ int jug_int = 2000;                                         // Integer version o
 char jug_array[4] = {'2', '0', '0', '0'};                   // Jug array to show on display & change digit by digit
 int jug_array_pos = 0;                                      // Jug array position variable
 
-//Keypad mapping
+//Keypad mapping ***********************************
 char keys[ROW_NUM][COLUMN_NUM] = {
   {'1','2','3', 'A'},
   {'4','5','6', 'B'},
   {'7','8','9', 'C'},
   {'*','0','#', 'D'}};
 
-//Objects to be used
+//Objects to be used *******************************
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);     // Change to (0x27,16,2) for 16x2 LCD
 RTC_DS3231 rtc;                                             // Object RTC        
 AT24C32 EepromRTC;                                          // Object EEpromRTC(Memory)
 MFRC522 mfrc522(SS_PIN, RST_PIN);                           // Create mfrc522 object by sending slave select and reset pins 
 Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
 
-//Cards to be read by RFID
+//Cards to be read by RFID *************************
 byte LecturaUID[4];                                         // Create array to store the UID read
 byte Usuario1[4]= {0x29, 0xB4, 0xA7, 0xB2} ;                // UID TO REST 
 byte Usuario2[4]= {0x49, 0x9F, 0x11, 0xC2} ;                // UID TO RESET
@@ -108,20 +108,20 @@ void reset(){
 //---- Print ticket format -------------------------------------------------------------------------------------------------------------------------------------------------
 void data_ticket(DateTime date, float volumen, int ticket, float carga){
   
-  Serial.println("               Lupqsa");
-  Serial.println("             S.A de C.V");
+  Serial.println("           Lupeqsa");
+  Serial.println("         S.A de C.V");
   Serial.println(" ");
-  Serial.print("Medidor: ");
+  Serial.println("Medidor: ");
   Serial.println("L001");
-  Serial.print("Ticket: ");
+  Serial.println("Ticket: ");
   Serial.println(ticket);
-  Serial.print("Fecha");
+  Serial.println("Fecha:");
   Serial.print(date.day(), DEC);
   Serial.print('/');
   Serial.print(date.month(), DEC);
   Serial.print('/');
   Serial.println(date.year(), DEC);
-  Serial.print("Hora: ");
+  Serial.println("Hora: ");
   Serial.print(date.hour(), DEC);
   Serial.print(':');
   
@@ -130,9 +130,9 @@ void data_ticket(DateTime date, float volumen, int ticket, float carga){
     Serial.print("0");  
   }
   Serial.println(date.minute(), DEC);
-  Serial.print("Carga: ");  
+  Serial.println("Carga: ");  
   Serial.println(carga);
-  Serial.print("Totalizer: ");  
+  Serial.println("Totalizer: ");  
   Serial.println(volumen);
   Serial.println(" ");
   Serial.println("   -----------------------------");
