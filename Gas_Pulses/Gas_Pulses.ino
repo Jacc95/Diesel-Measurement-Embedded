@@ -222,7 +222,7 @@ void setup()
   //pinMode(CalButton, INPUT_PULLUP);                                       // Defines pin 4 as input with default state of TRUE
   //pinMode(PrintButton, INPUT_PULLUP);                                     // Defines pin 5 as input with default state of TRUE
   attachInterrupt(digitalPinToInterrupt(PinSensor),ContarPulsos,RISING);  // (Interrupción 0(Pin2),función,Flanco de subida)
-  Serial.println ("Envie 'r' para restablecer el volumen a 0 Litros");    // 
+  //Serial.println ("Envie 'r' para restablecer el volumen a 0 Litros");    // 
   t0 = millis();                                                          //   
   Wire.begin();                                                           // 
 
@@ -251,8 +251,7 @@ void setup()
   //Read the EEPROM and get the latest values
   volumen = EepromRTC.readFloat(1);                                       // Read totalizer volume from address 1 to 4.
   volumen_ant = EepromRTC.readFloat(7);                                   // Read previous totalizer volume from address 7 to 10.
-  //k_factor = EepromRTC.readFloat(12);                                   // Read the latest calibration factor
-  k_factor = 1;
+  k_factor = EepromRTC.readFloat(12);                                     // Read the latest calibration factor
 } 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -319,11 +318,11 @@ void loop ()
     }
     jug_int = jug.toInt();
     
-    if(key == 'C'){                                                          // Press the button again to finish calib mode
+    if(key == 'C'){                                                         // Press the button again to finish calib mode
       calibration_flag = false;
-      if(vol_cal > 6.00){                                                    // Measured volume should be higher than 6 to make sure there was no mistake
-        k_factor = k_fact(vol_cal, jug_int);                                 // Get new k_factor
-        EepromRTC.writeFloat(12, k_factor);                                  // Write new k_factor constant in memory position 12
+      if(vol_cal > 6.00){                                                   // Measured volume should be higher than 6 to make sure there was no mistake
+        k_factor = k_fact(vol_cal, jug_int);                                // Get new k_factor
+        EepromRTC.writeFloat(12, k_factor);                                 // Write new k_factor constant in memory position 12
       }
     }
   }
