@@ -379,10 +379,11 @@ void loop ()
     }
  
     //------ Updates EEPROM Values --------------------------------------------------------------------------------------------------------------------
-    //Observation: This process should be out or inside the normal operation mode? Added here to give it a try and see if it affects performance.
-    EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.
+    //EEPROM Here
     if((now.hour() == 23) && (now.minute() == 59) && (now.second() == 59)){   // If next day, restarts ticket number count at 23:59 as of right now. Doesnt work right now because of how on/off works.
       EepromRTC.writeInt(5, 1);                                               // Write accumulated volume from address 5 to 6.
     }
   }
+  //Observation: This process should be out or inside the normal operation mode? Added here to give it a try and see if it affects performance.
+  EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.
 }
