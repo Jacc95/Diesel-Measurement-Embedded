@@ -13,17 +13,15 @@
 
 //Assign PINs **************************************
 #define PinSensor 3                                         // Sensor conectado en el pin 3
-//#define CalButton 4                                         // Calibration button connected to pin 4
-//#define PrintButton 5                                       // Printer button connected to pin 5
 #define RST_PIN  9                                          // Constant to reference reset pin
 #define SS_PIN  10                                          // Constant to reference pin of slave select 
-byte pin_rows[ROW_NUM] = {A3, A2, A1, A0};                  // Connect to the row pinouts of the keypad
-byte pin_column[COLUMN_NUM] = {7, 6, 5, 4};                 // Connect to the column pinouts of the keypad
+byte pin_rows[ROW_NUM] = {A0, A1, A2, A3};                  // Connect to the row pinouts of the keypad
+byte pin_column[COLUMN_NUM] = {4, 5, 6, 7};                 // Connect to the column pinouts of the keypad
 
 //Global variables *********************************
 volatile int NumPulsos;                                     // Variable para la cantidad de pulsos recibidos
 float factor_conversion = 1.400;                            // Para convertir de frecuencia a caudal
-float factor_conversion_cal = 1.503;                        // Factor para calibracion
+float factor_conversion_cal = 1.500;                        // Factor para calibracion
 float volumen = 0;                                          // 
 float volumen_ant = 0;                                      //
 float carga;                                                // 
@@ -41,6 +39,7 @@ String jug = "";                                            // Keypad variable t
 int jug_int = 2000;                                         // Integer version of jug variable
 char jug_array[4] = {'2', '0', '0', '0'};                   // Jug array to show on display & change digit by digit
 int jug_array_pos = 0;                                      // Jug array position variable
+//int freq_total_cal = 0;
 
 //Keypad mapping ***********************************
 char keys[ROW_NUM][COLUMN_NUM] = {
@@ -91,7 +90,7 @@ int ObtenerFrecuecia()
 void lcd_display(float freq, float carga){
   lcd.setCursor(0, 0);                                      // Sets cursor at first row
   lcd.print(freq); 
-
+  //lcd.print("Litros:");
  lcd.setCursor(0, 1);                                       // Sets cursor at second row
   lcd.print(carga);   
 }
@@ -103,6 +102,9 @@ void reset(){
     EepromRTC.writeFloat(7, 0);                             // Initializes prev pulses memory to clean trash in memory 
     EepromRTC.write(11, 0);                                 // Tells the Arduino variables can only be initialized through INITIALIZE.INO
     EepromRTC.writeFloat(12, 1.00);                         // Initializes k_factor variable at 1.00
+    k_factor = 1.00;
+    volumen = 0.00;                                       // Read totalizer volume from address 1 to 4.
+    volumen_ant = 0.00;
 }
 
 //---- Print ticket format -------------------------------------------------------------------------------------------------------------------------------------------------
@@ -135,8 +137,27 @@ void data_ticket(DateTime date, float volumen, int ticket, float carga){
   Serial.println("Totalizer: ");  
   Serial.println(volumen);
   Serial.println(" ");
-  Serial.println("   -----------------------------");
+  Serial.println("           -----------");
   Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println("           -----------");
+  Serial.println(" ");
+  
 
   lcd.clear();                                                            // Clears LCD screen
 }
@@ -176,8 +197,8 @@ boolean comparaUID(byte lectura[],byte usuario[])                         // com
 
 //---- Calibration --------------------------------------------------------------------------------------------------------------------------------------------------------
 float calibration(float factor_conversion, float t0_cal, float vol_cal){
-  float freq_cal = ObtenerFrecuecia();                                  // Obtenemos la frecuencia de los pulsos en Hz
-  float caudal_cal = freq_cal/factor_conversion;                        // Calculamos el caudal en L/m
+  int freq_cal = ObtenerFrecuecia();                                    // Obtenemos la frecuencia de los pulsos en Hz
+  float caudal_cal = freq_cal/factor_conversion_cal;                    // Calculamos el caudal en L/m
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
 
   vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/250);                  // Volumen(L) = caudal(L/s)*tiempo(s)
@@ -194,21 +215,31 @@ float k_fact(float vol_cal, int jug_int){
 void display_cal(float vol_cal, char Arreglo[]){
   interrupts();
   lcd.clear();
-  
-  lcd.setCursor(0, 0);                                                  // Sets cursor at first row & shows 1st digit
+
+  lcd.print("Calibrar: ");
+  lcd.setCursor(10, 0);                                                  // Sets cursor at first row & shows 1st digit
   lcd.print(Arreglo[0]); 
-  lcd.setCursor(1, 0);                                                  // Sets cursor at first row & shows 2nd digit
+  lcd.setCursor(11, 0);                                                  // Sets cursor at first row & shows 2nd digit
   lcd.print(Arreglo[1]); 
-  lcd.setCursor(2, 0);                                                  // Sets cursor at first row & displays decimal point
+  lcd.setCursor(12, 0);                                                  // Sets cursor at first row & displays decimal point
   lcd.print('.'); 
-  lcd.setCursor(3, 0);                                                  // Sets cursor at first row & shows 3rd digit
+  lcd.setCursor(13, 0);                                                  // Sets cursor at first row & shows 3rd digit
   lcd.print(Arreglo[2]); 
-  lcd.setCursor(4, 0);                                                  // Sets cursor at first row & shows 4th digit
+  lcd.setCursor(14, 0);                                                  // Sets cursor at first row & shows 4th digit
   lcd.print(Arreglo[3]); 
+  lcd.setCursor(15, 0);                                                  // Sets cursor at first row & shows 4th digit
+  lcd.print("L"); 
   
-  lcd.setCursor(0, 1);                                                  // Sets cursor at second row & show current liters passed
+  lcd.setCursor(0, 1);                                                   // Sets cursor at second row & show current liters passed
   lcd.print(vol_cal);
   lcd.print(" L");
+
+  lcd.cursor();
+  if(jug_array_pos < 2){
+    lcd.setCursor(10 + jug_array_pos, 0);
+  }else{
+    lcd.setCursor(11 + jug_array_pos, 0);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -219,10 +250,9 @@ void setup()
 { 
   Serial.begin(9600);                                                     // Starts Serial comm at 9600 baud rate
   pinMode(PinSensor, INPUT);                                              // Defines pin 3 as input
-  //pinMode(CalButton, INPUT_PULLUP);                                       // Defines pin 4 as input with default state of TRUE
-  //pinMode(PrintButton, INPUT_PULLUP);                                     // Defines pin 5 as input with default state of TRUE
   attachInterrupt(digitalPinToInterrupt(PinSensor),ContarPulsos,RISING);  // (Interrupción 0(Pin2),función,Flanco de subida)
   //Serial.println ("Envie 'r' para restablecer el volumen a 0 Litros");    // 
+  
   t0 = millis();                                                          //   
   Wire.begin();                                                           // 
 
@@ -320,6 +350,7 @@ void loop ()
     
     if(key == 'C'){                                                         // Press the button again to finish calib mode
       calibration_flag = false;
+      lcd.noCursor();
       if(vol_cal > 6.00){                                                   // Measured volume should be higher than 6 to make sure there was no mistake
         k_factor = k_fact(vol_cal, jug_int);                                // Get new k_factor
         EepromRTC.writeFloat(12, k_factor);                                 // Write new k_factor constant in memory position 12
