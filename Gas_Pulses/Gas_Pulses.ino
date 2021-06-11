@@ -39,7 +39,7 @@ String jug = "";                                            // Keypad variable t
 int jug_int = 2000;                                         // Integer version of jug variable
 char jug_array[4] = {'2', '0', '0', '0'};                   // Jug array to show on display & change digit by digit
 int jug_array_pos = 0;                                      // Jug array position variable
-//int freq_total_cal = 0;
+bool auth_flag = false;                                     // Authorization flag to access functions
 
 //Keypad mapping ***********************************
 char keys[ROW_NUM][COLUMN_NUM] = {
@@ -65,14 +65,12 @@ byte Usuario2[4]= {0x49, 0x9F, 0x11, 0xC2} ;                // UID TO RESET
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //---- Función que se ejecuta en interrupción ------------------------------------------------------------------------------------------------------------------------------
-void ContarPulsos ()
-{ 
+void ContarPulsos (){ 
   NumPulsos++;                                              // Incrementamos la variable de pulsos
 } 
 
 //---- Función para obtener frecuencia de los pulsos -----------------------------------------------------------------------------------------------------------------------
-int ObtenerFrecuecia() 
-{
+int ObtenerFrecuecia() {
   int frecuencia;
   interrupts();                                             // Habilitamos las interrupciones
   NumPulsos = 0;                                            // Ponemos a 0 el número de pulsos
@@ -171,23 +169,16 @@ void rfid(){
       LecturaUID[i]=mfrc522.uid.uidByte[i];                               // stores the byte of the UID read in an array   
   }
   if(comparaUID(LecturaUID, Usuario1)){   
-      reset();
-      volumen = 0;  
-      volumen_ant = 0;
-      lcd.clear();                                                        // Clears LCD screen
+      auth_flag = true;
   } else if(comparaUID(LecturaUID, Usuario2)){
-      reset(); 
-      volumen = 0;
-      volumen_ant = 0; 
-      lcd.clear();
+      auth_flag = true;
    }
    else                                                                   // si retorna falso
       Serial.println("Llave no valida");              
       mfrc522.PICC_HaltA();                                               // card communication stops              
 }
 
-boolean comparaUID(byte lectura[],byte usuario[])                         // comparaUID is used on RFID function
-{
+boolean comparaUID(byte lectura[],byte usuario[]){                         // comparaUID is used on RFID function
   for (byte i=0; i < mfrc522.uid.size; i++){                              // loop goes through the UID one byte at a time
     if(lectura[i] != usuario[i])                                          // if byte of UID read is different from user
       return false;                            
@@ -311,73 +302,87 @@ void loop ()
   if(calibration_flag == false){
     lcd_display(k_factor, carga);
   }
-  //---- Keypad Selection ---------------------------------------------------------------------------------------------------------------------------
-  char key = keypad.getKey();                                                // Cleans the mode variable if no input.
-  
-  //---- Calibration --------------------------------------------------------------------------------------------------------------------------------
-  if(key == 'C'){                                                            // Press the button to enter calibration mode
-      if(calibration_flag == false){
-        calibration_flag = true;
-        vol_cal = 0;
-        //jug_fill_str = "2000";
-      }
-  }
-  
-  while(calibration_flag == true){                                           // Calibration procedure                                                                                
-    vol_cal = calibration(factor_conversion_cal, t0_cal,vol_cal);            // 1 sec delay is included here
-    t0_cal = millis();
-    display_cal(vol_cal, jug_array);
-    
-    /*if (Serial.available()) {
-      jug_fill_str = Serial.readString();                                    // Restablecemos el volumen si recibimos 'r'
-      jug_fill = jug_fill_str.toInt();
-    }*/
-    
-    key = keypad.getKey();                                                   // Gets new values for jug or exits calibration mode
-    if(key == '#' && jug_array_pos < 3){
-      jug_array_pos++;
-    } else if(key == '*' && jug_array_pos > 0){
-      jug_array_pos--;
-    } else if(key=='1' || key=='2' || key=='3' || key=='4' || key=='5' || key=='6' || key=='7' || key=='8' || key=='9' || key=='0'){
-      jug_array[jug_array_pos] = key;
-    }
 
-    jug = "";
-    for(int i=0; i<4; i++){
-      jug.concat(jug_array[i]);
-    }
-    jug_int = jug.toInt();
-    
-    if(key == 'C'){                                                         // Press the button again to finish calib mode
-      calibration_flag = false;
-      lcd.noCursor();
-      if(vol_cal > 6.00){                                                   // Measured volume should be higher than 6 to make sure there was no mistake
-        k_factor = k_fact(vol_cal, jug_int);                                // Get new k_factor
-        EepromRTC.writeFloat(12, k_factor);                                 // Write new k_factor constant in memory position 12
-      }
-    }
-  }
-  
-  //---- Printing -----------------------------------------------------------------------------------------------------------------------------------
-  DateTime now = rtc.now();                                                 // Gets current Date-Time
-  if(key == 'B'){
-    //Gets the necessary variables for the ticket
-    ticket = EepromRTC.readInt(5);                                          // Read memory pulses from address 5 to 6.
-    
-    data_ticket(now, volumen, ticket, carga);                               // Prints ticket
-    volumen_ant = volumen;
-    EepromRTC.writeInt(5, ++ticket);                                        // Writes next ticket number into EEPROM
-    EepromRTC.writeFloat(7, volumen_ant);
-  }
-    
-  //------ Updates EEPROM Values --------------------------------------------------------------------------------------------------------------------
-  EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.
-  if((now.hour() == 23) && (now.minute() == 59) && (now.second() == 59)){   // If next day, restarts ticket number count at 23:59 as of right now. 
-    EepromRTC.writeInt(5, 1);                                               // Write accumulated volume from address 5 to 6.
-  }
-
-  //------ RFID Reset -------------------------------------------------------------------------------------------------------------------------------
+  //---- RFID Access --------------------------------------------------------------------------------------------------------------------------------
   if (mfrc522.PICC_IsNewCardPresent()) {
     rfid();
+  }
+
+  if(auth_flag == true){
+  //---- Keypad Selection ---------------------------------------------------------------------------------------------------------------------------
+    char key = keypad.getKey();                                                // Asks for a particular mode/operation. Cleans the key variable if no input.
+
+    //------ RFID Reset -------------------------------------------------------------------------------------------------------------------------------
+    if(key == 'D'){
+      reset();
+      volumen = 0;  
+      volumen_ant = 0;
+      lcd.clear(); 
+    }
+  
+    //------ Exits administrator mode -----------------------------------------------------------------------------------------------------------------
+    if(key == 'A'){
+      auth_flag = false;
+    }
+
+    //------ Enters calibration mode ------------------------------------------------------------------------------------------------------------------
+    if(key == 'C'){                                                            
+        if(calibration_flag == false){
+          calibration_flag = true;
+          vol_cal = 0;
+        }
+    }
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+  //---- Calibration --------------------------------------------------------------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    while(calibration_flag == true){                                           // Calibration procedure                                                                                
+      vol_cal = calibration(factor_conversion_cal, t0_cal,vol_cal);            // 1 sec delay is included here
+      t0_cal = millis();
+      display_cal(vol_cal, jug_array);
+    
+    
+      key = keypad.getKey();                                                   // Gets new values for jug or exits calibration mode
+      if(key == '#' && jug_array_pos < 3){
+        jug_array_pos++;
+      } else if(key == '*' && jug_array_pos > 0){
+        jug_array_pos--;
+      } else if(key=='1' || key=='2' || key=='3' || key=='4' || key=='5' || key=='6' || key=='7' || key=='8' || key=='9' || key=='0'){
+        jug_array[jug_array_pos] = key;
+      }
+  
+      jug = "";
+      for(int i=0; i<4; i++){
+        jug.concat(jug_array[i]);
+      }
+      jug_int = jug.toInt();
+      
+      if(key == 'C'){                                                         // Press the button again to finish calib mode
+        calibration_flag = false;
+        lcd.noCursor();
+        if(vol_cal > 6.00){                                                   // Measured volume should be higher than 6 to make sure there was no mistake
+          k_factor = k_fact(vol_cal, jug_int);                                // Get new k_factor
+          EepromRTC.writeFloat(12, k_factor);                                 // Write new k_factor constant in memory position 12
+        }
+      }
+    }
+  
+    //---- Printing -----------------------------------------------------------------------------------------------------------------------------------
+    DateTime now = rtc.now();                                                 // Gets current Date-Time
+    if(key == 'B'){                                                           // Prints "boleto"
+      ticket = EepromRTC.readInt(5);                                          // Read memory pulses from address 5 to 6.
+      
+      data_ticket(now, volumen, ticket, carga);                               // Prints ticket
+      volumen_ant = volumen;
+      EepromRTC.writeInt(5, ++ticket);                                        // Writes next ticket number into EEPROM
+      EepromRTC.writeFloat(7, volumen_ant);
+    }
+ 
+    //------ Updates EEPROM Values --------------------------------------------------------------------------------------------------------------------
+    //Observation: This process should be out or inside the normal operation mode? Added here to give it a try and see if it affects performance.
+    EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.
+    if((now.hour() == 23) && (now.minute() == 59) && (now.second() == 59)){   // If next day, restarts ticket number count at 23:59 as of right now. Doesnt work right now because of how on/off works.
+      EepromRTC.writeInt(5, 1);                                               // Write accumulated volume from address 5 to 6.
+    }
   }
 }
