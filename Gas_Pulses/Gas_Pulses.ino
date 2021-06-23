@@ -20,14 +20,13 @@ byte pin_column[COLUMN_NUM] = {4, 5, 6, 7};                 // Connect to the co
 
 //Global variables *********************************
 volatile int NumPulsos;                                     // Variable para la cantidad de pulsos recibidos
-float factor_conversion = 1.400;                            // Para convertir de frecuencia a caudal
+float factor_conversion = 1.350;                            // Para convertir de frecuencia a caudal
 float factor_conversion_cal = 1.500;                        // Factor para calibracion
 float volumen = 0;                                          // 
 float volumen_ant = 0;                                      //
 float carga;                                                // 
 long dt = 0;                                                // Variación de tiempo por cada bucle
 long t0 = 0;                                                // Millis() del bucle anterior
-float total_freq = 0;                                       // 
 int ticket = 1;                                             // Printing variables: Ticket number
 float k_factor = 1.00;                                      // Calibration factor based on error %
 bool calibration_flag = false;                              // Calibration condition flag
@@ -75,9 +74,9 @@ int ObtenerFrecuecia() {
   interrupts();                                             // Habilitamos las interrupciones
   NumPulsos = 0;                                            // Ponemos a 0 el número de pulsos
   if(calibration_flag == true){
-    delay(250);                                              // Muestra de 1 segundo
+    delay(250);                                              // Muestra de 0.25 segundo
   } else {
-    delay(1000);
+    delay(500);                                             // Muestra de 0.5 segs
   }
   frecuencia = NumPulsos;                                   // Hz(pulsos por segundo)
   noInterrupts();                                           // Deshabilitamos  las interrupciones
@@ -283,10 +282,9 @@ void loop ()
 {
   float frecuencia = ObtenerFrecuecia();                                  // Obtenemos la frecuencia de los pulsos en Hz
   float caudal_L_m = frecuencia/factor_conversion;                        // Calculamos el caudal en L/m
-  total_freq += frecuencia;
   dt = millis() - t0;                                                     // Calculamos la variación de tiempo
   t0 = millis();
-  volumen = volumen + k_factor * (caudal_L_m/60) * (dt/1000);             // Volumen(L) = caudal(L/s)*tiempo(s)
+  volumen = volumen + k_factor * (caudal_L_m/60) * (dt/500);             // Volumen(L) = caudal(L/s)*tiempo(s)
   carga = volumen - volumen_ant;
 
   //----- Enviamos por el puerto serie -------------------------------------------------------------------------------------------------------------
@@ -383,7 +381,11 @@ void loop ()
     if((now.hour() == 23) && (now.minute() == 59) && (now.second() == 59)){   // If next day, restarts ticket number count at 23:59 as of right now. Doesnt work right now because of how on/off works.
       EepromRTC.writeInt(5, 1);                                               // Write accumulated volume from address 5 to 6.
     }
+     /* //Observation: This process should be out or inside the normal operation mode? Added here to give it a try and see if it affects performance.
+      EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.*/
   }
   //Observation: This process should be out or inside the normal operation mode? Added here to give it a try and see if it affects performance.
-  EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.
+  if((millis()%5000) == 0){
+    EepromRTC.writeFloat(1, volumen);                                         // Write accumulated volume from address 1 to 4.
+  }
 }
