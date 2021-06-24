@@ -192,7 +192,7 @@ float calibration(float factor_conversion, float t0_cal, float vol_cal){
   float dt_cal = millis() - t0_cal;                                     // Calculamos la variación de tiempo
 
   vol_cal = vol_cal + (caudal_cal/60) * (dt_cal/250);                  // Volumen(L) = caudal(L/s)*tiempo(s)
-  return vol_cal;
+  return freq_cal;
 }
 
 float k_fact(float vol_cal, int jug_int){
@@ -298,7 +298,7 @@ void loop ()
   interrupts();
   lcd.clear();
   if(calibration_flag == false){
-    lcd_display(k_factor, carga);
+    lcd_display(frecuencia, carga);
   }
 
   //---- RFID Access --------------------------------------------------------------------------------------------------------------------------------
