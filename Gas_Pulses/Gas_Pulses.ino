@@ -39,6 +39,7 @@ int jug_int = 2000;                                         // Integer version o
 char jug_array[4] = {'2', '0', '0', '0'};                   // Jug array to show on display & change digit by digit
 int jug_array_pos = 0;                                      // Jug array position variable
 bool auth_flag = false;                                     // Authorization flag to access functions
+float freq_acc = 0;                                             // Debugging variable
 
 //Keypad mapping ***********************************
 char keys[ROW_NUM][COLUMN_NUM] = {
@@ -281,6 +282,7 @@ void setup()
 void loop ()    
 {
   float frecuencia = ObtenerFrecuecia();                                  // Obtenemos la frecuencia de los pulsos en Hz
+  freq_acc = freq_acc + frecuencia;                                       // Acumulamos la frecuencia (pulsos)
   float caudal_L_m = frecuencia/factor_conversion;                        // Calculamos el caudal en L/m
   dt = millis() - t0;                                                     // Calculamos la variación de tiempo
   t0 = millis();
@@ -298,7 +300,7 @@ void loop ()
   interrupts();
   lcd.clear();
   if(calibration_flag == false){
-    lcd_display(frecuencia, carga);
+    lcd_display(freq_acc, carga);
   }
 
   //---- RFID Access --------------------------------------------------------------------------------------------------------------------------------
@@ -326,6 +328,7 @@ void loop ()
     //------ Enters calibration mode ------------------------------------------------------------------------------------------------------------------
     if(key == 'C'){                                                            
         if(calibration_flag == false){
+          freq_acc = 0;
           calibration_flag = true;
           vol_cal = 0;
         }
@@ -336,8 +339,9 @@ void loop ()
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     while(calibration_flag == true){                                           // Calibration procedure                                                                                
       vol_cal = calibration(factor_conversion_cal, t0_cal,vol_cal);            // 1 sec delay is included here
+      freq_acc = freq_acc + vol_cal;
       t0_cal = millis();
-      display_cal(vol_cal, jug_array);
+      display_cal(freq_acc, jug_array);
     
     
       key = keypad.getKey();                                                   // Gets new values for jug or exits calibration mode
@@ -358,6 +362,7 @@ void loop ()
       if(key == 'C'){                                                         // Press the button again to finish calib mode
         calibration_flag = false;
         lcd.noCursor();
+        freq_acc = 0;
         if(vol_cal > 6.00){                                                   // Measured volume should be higher than 6 to make sure there was no mistake
           k_factor = k_fact(vol_cal, jug_int);                                // Get new k_factor
           EepromRTC.writeFloat(12, k_factor);                                 // Write new k_factor constant in memory position 12
@@ -374,6 +379,7 @@ void loop ()
       volumen_ant = volumen;
       EepromRTC.writeInt(5, ++ticket);                                        // Writes next ticket number into EEPROM
       EepromRTC.writeFloat(7, volumen_ant);
+      freq_acc = 0.0;
     }
  
     //------ Updates EEPROM Values --------------------------------------------------------------------------------------------------------------------
